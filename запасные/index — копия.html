@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💬 DIDI - Мессенджер</title>
+    <style>
+        /* ===== СБРОС СТИЛЕЙ ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        
+        /* ===== ОСНОВНЫЕ СТИЛИ ===== */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            overflow: hidden;
+            display: flex;
+        }
+        
+        /* ===== СТИЛИ ДЛЯ ЭКРАНА ВХОДА ===== */
+        .auth-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            background: white;
+        }
+        
+        .auth-screen.hidden {
+            display: none !important;
+        }
+        
+        .logo {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 40px;
+        }
+        
+        .auth-form {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .auth-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .status-success {
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+            display: block !important;
+        }
+        
+        .status-error {
+            background: rgba(231, 76, 60, 0.1);
+            color: #c0392b;
+            display: block !important;
+        }
+        
+        /* ===== СТИЛИ ДЛЯ ОСНОВНОГО ИНТЕРФЕЙСА ===== */
+        .main-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            display: none;
+        }
+        
+        .main-screen.active {
+            display: flex !important;
+        }
+        
+        /* ЛЕВАЯ ПАНЕЛЬ - ДРУЗЬЯ И ЧАТЫ */
+        .left-panel {
+            width: 380px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* ХЕДЕР ЛЕВОЙ ПАНЕЛИ - ПРОФИЛЬ (ИЗМЕНЕНО) */
+        .profile-header {
+            padding: 25px 20px 15px 20px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .profile-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+        
+        .profile-info {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .avatar-large {
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .profile-text h3 {
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .profile-text p {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .profile-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .profile-btn {
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .profile-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        .profile-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .profile-btn.primary:hover {
+            background: #5a6fd8;
+        }
+        
+        /* КНОПКА СОЗДАТЬ ГРУППОВОЙ ЧАТ (ИЗМЕНЕНО) */
+        .create-chat-container {
+            padding: 20px 20px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .create-chat-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .create-chat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* ВКЛАДКИ ДРУЗЬЯ / ЧАТЫ */
+        .tabs-header {
+            display: flex;
+            padding: 0 20px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .tab {
+            padding: 15px 20px;
+            font-weight: 600;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        /* СПИСОК ЧАТОВ (ИЗМЕНЕНО - КАК НА СКРИНШОТЕ) */
+        .chats-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px 20px;
+            background: #f8f9fa;
+        }
+        
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 8px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        
+        .chat-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .chat-item.active {
+            background: #e3f2fd;
+        }
+        
+        .chat-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            margin-right: 15px;
+        }
+        
+        .chat-info {
+            flex: 1;
+        }
+        
+        .chat-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .chat-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .chat-time {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .chat-last-message {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-message-text {
+            color: #666;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+        
+        .chat-badge {
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        /* ПРАВАЯ ПАНЕЛЬ - ЧАТ */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+        
+        /* ХЕДЕР ЧАТА */
+        .chat-header {
+            padding: 25px 30px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-header-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .chat-header-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .chat-header-text h2 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .chat-header-text p {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .chat-header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 18px;
+        }
+        
+        .icon-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        /* ОКНО СООБЩЕНИЙ (ИЗМЕНЕНО) */
+        .messages-container {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .empty-chat {
+            text-align: center;
+            color: #999;
+        }
+        
+        .empty-chat .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .empty-chat h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .empty-chat p {
+            color: #888;
+            font-size: 15px;
+        }
+        
+        /* ФОРМА ОТПРАВКИ СООБЩЕНИЯ (ИЗМЕНЕНО) */
+        .message-input-container {
+            padding: 25px 30px;
+            border-top: 1px solid #e9ecef;
+            background: white;
+        }
+        
+        .message-input-wrapper {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+            background: #f8f9fa;
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+        
+        .send-btn {
+            padding: 15px 30px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* ===== УТИЛИТЫ ===== */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ЭКРАН ВХОДА / РЕГИСТРАЦИИ -->
+        <div class="auth-screen" id="authScreen">
+            <div class="logo">💬 DIDI</div>
+            
+            <div class="auth-form">
+                <div class="auth-tabs">
+                    <div class="auth-tab active" onclick="showLoginForm()">Вход</div>
+                    <div class="auth-tab" onclick="showRegisterForm()">Регистрация</div>
+                </div>
+                
+                <!-- ФОРМА ВХОДА -->
+                <div id="loginForm">
+                    <div class="form-group">
+                        <label for="loginUsername">Имя пользователя</label>
+                        <input type="text" id="loginUsername" class="form-input" placeholder="test_user" value="test_user">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="loginPassword">Пароль</label>
+                        <input type="password" id="loginPassword" class="form-input" placeholder="12345" value="12345">
+                    </div>
+                    
+                    <button class="btn" onclick="login()">Войти в DIDI</button>
+                </div>
+                
+                <!-- ФОРМА РЕГИСТРАЦИИ -->
+                <div id="registerForm" class="hidden">
+                    <div class="form-group">
+                        <label for="registerUsername">Имя пользователя</label>
+                        <input type="text" id="registerUsername" class="form-input" placeholder="Придумайте имя">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerPassword">Пароль</label>
+                        <input type="password" id="registerPassword" class="form-input" placeholder="Придумайте пароль">
+                    </div>
+                    
+                    <button class="btn" onclick="register()">Создать аккаунт</button>
+                </div>
+                
+                <div id="statusMessage" class="status-message"></div>
+                
+                <!-- ТЕСТОВАЯ КНОПКА -->
+                <div style="margin-top: 20px; text-align: center;">
+                    <button onclick="testForceLogin()" 
+                            style="background: #ff6b6b; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                        🔧 ТЕСТ: Показать мессенджер
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ОСНОВНОЙ ИНТЕРФЕЙС МЕССЕНДЖЕРА - ПОЛНОСТЬЮ ПЕРЕДЕЛАН ПОД СКРИНШОТ -->
+        <div class="main-screen" id="mainScreen">
+            <!-- ЛЕВАЯ ПАНЕЛЬ -->
+            <div class="left-panel">
+                <!-- ПРОФИЛЬ (Artem, ID: 6 + кнопки) -->
+                <div class="profile-header">
+                    <div class="profile-row">
+                        <div class="profile-info">
+                            <div class="avatar-large" id="userAvatarLarge">A</div>
+                            <div class="profile-text">
+                                <h3 id="profileUserName">Artem</h3>
+                                <p id="profileUserInfo">ID: 6</p>
+                            </div>
+                        </div>
+                        <div class="profile-buttons">
+                            <button class="profile-btn" onclick="openProfileSettings()">⚙️</button>
+                            <button class="profile-btn primary" onclick="logout()">🚪</button>
+                        </div>
+                    </div>
+                </div>
+                
+<!-- КНОПКИ: ДОБАВИТЬ ДРУГА + СОЗДАТЬ ГРУППОВОЙ ЧАТ -->
+<div class="create-chat-container" style="display: flex; gap: 10px;">
+    <button onclick="openAddFriend()" style="
+        flex: 1;
+        padding: 12px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s;
+    ">
+        👤 Добавить друга
+    </button>
+    
+    <button onclick="openCreateChat()" style="
+        flex: 1;
+        padding: 12px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s;
+    ">
+        👥 Создать групповой чат
+    </button>
+</div>
+                
+<!-- КОНТЕЙНЕР ДЛЯ ЧАТОВ/ДРУЗЕЙ -->
+<div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+    
+    <!-- КНОПКИ: ЧАТЫ И МОИ ДРУЗЬЯ (ПРИКЛЕЕНЫ СВЕРХУ) -->
+    <div style="padding: 15px 20px; background: white; display: flex; gap: 10px;">
+        <button onclick="showAllChats()" style="
+            flex: 1;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        " class="chats-tab">
+            💬 Чаты
+        </button>
+        
+        <button onclick="showMyFriends()" style="
+            flex: 1;
+            padding: 10px;
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        " class="friends-tab">
+            👥 Мои друзья
+        </button>
+    </div>
+    
+    <!-- СПИСОК ЧАТОВ -->
+    <div class="chats-list" id="chatsList" style="flex: 1; overflow-y: auto; padding: 15px 20px;">
+        <!-- didi Новости -->
+        <div class="chat-item" onclick="selectTestChat('didi Новости')">
+            <div class="chat-avatar">📰</div>
+            <div class="chat-info">
+                <div class="chat-info-header">
+                    <span class="chat-name">didi Новости</span>
+                    <span class="chat-time">09:15</span>
+                </div>
+                <div class="chat-last-message">
+                    <span class="chat-message-text">Новые функции уже доступны!</span>
+                    <span class="chat-badge">1</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Анна -->
+        <div class="chat-item" onclick="selectTestChat('Анна')">
+            <div class="chat-avatar">👩</div>
+            <div class="chat-info">
+                <div class="chat-info-header">
+                    <span class="chat-name">Анна</span>
+                    <span class="chat-time">08:42</span>
+                </div>
+                <div class="chat-last-message">
+                    <span class="chat-message-text">Привет! Как дела?</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Рабочий чат -->
+        <div class="chat-item" onclick="selectTestChat('Рабочий чат')">
+            <div class="chat-avatar">💼</div>
+            <div class="chat-info">
+                <div class="chat-info-header">
+                    <span class="chat-name">Рабочий чат</span>
+                    <span class="chat-time">Вчера</span>
+                </div>
+                <div class="chat-last-message">
+                    <span class="chat-message-text">Документы получил, спасибо!</span>
+                    <span class="chat-badge">2</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Друзья -->
+        <div class="chat-item" onclick="selectTestChat('Друзья')">
+            <div class="chat-avatar">👥</div>
+            <div class="chat-info">
+                <div class="chat-info-header">
+                    <span class="chat-name">Друзья</span>
+                    <span class="chat-time">Вчера</span>
+                </div>
+                <div class="chat-last-message">
+                    <span class="chat-message-text">Прислали фото, посмотрите 😊</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Мама -->
+        <div class="chat-item" onclick="selectTestChat('Мама')">
+            <div class="chat-avatar">👵</div>
+            <div class="chat-info">
+                <div class="chat-info-header">
+                    <span class="chat-name">Мама</span>
+                    <span class="chat-time">Вчера</span>
+                </div>
+                <div class="chat-last-message">
+                    <span class="chat-message-text">Не забудь купить хлеб</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Кино в 19:00 -->
+        <div class="chat-item" onclick="selectTestChat('Кино в 19:00')">
+            <div class="chat-avatar">🎬</div>
+            <div class="chat-info">
+                <div class="chat-info-header">
+                    <span class="chat-name">Кино в 19:00</span>
+                    <span class="chat-time">Вчера</span>
+                </div>
+                <div class="chat-last-message">
+                    <span class="chat-message-text">Ок, договорились! 🎥</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- СПИСОК ДРУЗЕЙ (СКРЫТ) -->
+    <div class="chats-list" id="friendsList" style="flex: 1; overflow-y: auto; padding: 15px 20px; display: none;">
+        <div style="text-align: center; padding: 40px 20px; color: #888;">
+            <div style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;">👥</div>
+            <h3 style="font-size: 18px; color: #333; margin-bottom: 10px;">У вас пока нет друзей</h3>
+            <p style="font-size: 14px;">Нажмите «Добавить друга» чтобы найти собеседников</p>
+        </div>
+    </div>
+    
+</div>
+                
+
+            
+            <!-- ПРАВАЯ ПАНЕЛЬ -->
+            <div class="right-panel">
+                <!-- ХЕДЕР ЧАТА -->
+                <div class="chat-header">
+                    <div class="chat-header-info">
+                        <div class="chat-header-avatar" id="currentChatAvatar">💬</div>
+                        <div class="chat-header-text">
+                            <h2 id="currentChatTitle">Выберите чат</h2>
+                            <p id="currentChatParticipants">или начните новое общение</p>
+                        </div>
+                    </div>
+                    <div class="chat-header-actions">
+                        <button class="icon-btn" onclick="showChatInfo()">ℹ️</button>
+                        <button class="icon-btn" onclick="showChatSettings()">⚙️</button>
+                    </div>
+                </div>
+                
+                <!-- ОКНО СООБЩЕНИЙ (ПУСТОЕ, КАК НА СКРИНШОТЕ) -->
+                <div class="messages-container" id="messagesContainer">
+                    <div class="empty-chat">
+                        <div class="icon">💭</div>
+                        <h3>Выберите чат</h3>
+                        <p>или начните новое общение</p>
+                    </div>
+                </div>
+                
+                <!-- ФОРМА ОТПРАВКИ СООБЩЕНИЙ -->
+                <div class="message-input-container">
+                    <div class="message-input-wrapper">
+                        <input type="text" 
+                               class="message-input" 
+                               id="messageInput" 
+                               placeholder="Введите сообщение..." 
+                               onkeypress="handleMessageKeyPress(event)"
+                               disabled>
+                        <button class="send-btn" onclick="sendMessage()" id="sendButton" disabled>Отправить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== ОТЛАДКА =====
+        console.log('🚀 DIDI Мессенджер загружен');
+        
+        // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+        let currentUser = {
+            id: 6,
+            username: 'Artem'
+        };
+        let currentChat = null;
+        let allChats = [];
+        const SERVER_URL = 'http://localhost:3000';
+        
+        // ===== ФУНКЦИИ АВТОРИЗАЦИИ =====
+        
+        function showLoginForm() {
+            console.log('📝 Показываю форму входа');
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.querySelectorAll('.auth-tab')[0].classList.add('active');
+            document.querySelectorAll('.auth-tab')[1].classList.remove('active');
+        }
+        
+        function showRegisterForm() {
+            console.log('📝 Показываю форму регистрации');
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+            document.querySelectorAll('.auth-tab')[0].classList.remove('active');
+            document.querySelectorAll('.auth-tab')[1].classList.add('active');
+        }
+        
+        function showStatus(message, type = 'error') {
+            console.log(`📢 Статус: ${message} (${type})`);
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message status-${type}`;
+            
+            if (type !== 'error') {
+                setTimeout(() => {
+                    statusEl.className = 'status-message';
+                }, 3000);
+            }
+        }
+        
+        async function makeRequest(url, method = 'GET', data = null) {
+            console.log(`📡 Запрос: ${method} ${url}`, data);
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(SERVER_URL + url, options);
+                const result = await response.json();
+                
+                console.log(`📥 Ответ:`, result);
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    data: result
+                };
+            } catch (error) {
+                console.error('❌ Ошибка запроса:', error);
+                return { success: false, error: 'Сервер не отвечает' };
+            }
+        }
+        
+        async function register() {
+            console.log('🔄 Регистрация...');
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value.trim();
+            
+            if (!username || !password) {
+                showStatus('Заполните все поля', 'error');
+                return;
+            }
+            
+            const result = await makeRequest('/register', 'POST', { username, password });
+            
+            if (result.success) {
+                showStatus('Аккаунт создан! Входите', 'success');
+                document.getElementById('loginUsername').value = username;
+                document.getElementById('loginPassword').value = password;
+                setTimeout(() => showLoginForm(), 1000);
+            } else {
+                showStatus(result.data?.error || 'Ошибка регистрации', 'error');
+            }
+        }
+        
+        async function login() {
+            console.log('🔄 Вход в систему...');
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            
+            if (!username || !password) {
+                showStatus('Заполните все поля', 'error');
+                return;
+            }
+            
+            const result = await makeRequest('/login', 'POST', { username, password });
+            
+            console.log('Результат входа:', result);
+            
+            if (result.success && result.data.user) {
+                console.log('✅ Вход успешен!', result.data.user);
+                currentUser = result.data.user;
+                showMainInterface();
+                loadUserData();
+                showStatus(`Добро пожаловать, ${username}!`, 'success');
+            } else {
+                console.log('❌ Ошибка входа');
+                showStatus(result.data?.message || 'Ошибка входа', 'error');
+            }
+        }
+        
+        function logout() {
+            console.log('🚪 Выход из системы');
+            currentUser = { id: 6, username: 'Artem' };
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('mainScreen').classList.remove('active');
+            
+            document.getElementById('loginUsername').value = 'test_user';
+            document.getElementById('loginPassword').value = '12345';
+            showLoginForm();
+        }
+        
+        // ===== ГЛАВНЫЙ ИНТЕРФЕЙС =====
+        
+        function showMainInterface() {
+            console.log('🖥️ Показываю главный интерфейс');
+            
+            const authScreen = document.getElementById('authScreen');
+            const mainScreen = document.getElementById('mainScreen');
+            
+            authScreen.classList.add('hidden');
+            mainScreen.classList.add('active');
+            
+            loadUserData();
+        }
+        
+        function testForceLogin() {
+            console.log('🔧 ТЕСТ: Принудительный вход');
+            currentUser = { id: 6, username: 'Artem' };
+            showMainInterface();
+            showStatus('Тестовый вход выполнен!', 'success');
+        }
+        
+        // ===== ФУНКЦИИ ПРОФИЛЯ =====
+        
+        function loadUserData() {
+            console.log('👤 Загружаю данные пользователя');
+            if (!currentUser) return;
+            
+            document.getElementById('userAvatarLarge').textContent = 
+                currentUser.username.charAt(0).toUpperCase();
+            document.getElementById('profileUserName').textContent = currentUser.username;
+            document.getElementById('profileUserInfo').textContent = `ID: ${currentUser.id}`;
+        }
+        
+        function openProfileSettings() {
+            alert('Настройки профиля (в разработке)');
+        }
+        
+        function openCreateChat() {
+            alert('Создание группового чата (в разработке)');
+        }
+        
+        // ===== ФУНКЦИИ ЧАТОВ =====
+        
+        function selectTestChat(chatName) {
+            console.log(`💭 Выбран чат: ${chatName}`);
+            currentChat = { name: chatName };
+            
+            document.getElementById('currentChatTitle').textContent = chatName;
+            
+            let avatar = '💬';
+            if (chatName === 'didi Новости') avatar = '📰';
+            else if (chatName === 'Анна') avatar = '👩';
+            else if (chatName === 'Рабочий чат') avatar = '💼';
+            else if (chatName === 'Друзья') avatar = '👥';
+            else if (chatName === 'Мама') avatar = '👵';
+            else if (chatName === 'Кино в 19:00') avatar = '🎬';
+            
+            document.getElementById('currentChatAvatar').textContent = avatar;
+            document.getElementById('currentChatParticipants').textContent = 'online';
+            
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendButton').disabled = false;
+            
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.innerHTML = `
+                <div class="empty-chat">
+                    <div class="icon">💬</div>
+                    <h3>${chatName}</h3>
+                    <p>История сообщений появится здесь</p>
+                </div>
+            `;
+            
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+        
+        // ===== ФУНКЦИИ СООБЩЕНИЙ =====
+        
+        function sendMessage() {
+            alert('Отправка сообщений (в разработке)');
+            document.getElementById('messageInput').value = '';
+        }
+        
+        function handleMessageKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+        
+        function showChatInfo() {
+            if (!currentChat) {
+                alert('Выберите чат');
+                return;
+            }
+            alert(`Информация о чате: ${currentChat.name}`);
+        }
+        
+        function showChatSettings() {
+            alert('Настройки чата (в разработке)');
+        }
+        
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        
+        window.onload = function() {
+            console.log('🌐 Страница загружена');
+            
+            makeRequest('/').then(result => {
+                if (result.success) {
+                    console.log('✅ Сервер доступен');
+                } else {
+                    console.log('❌ Сервер не отвечает');
+                }
+            });
+            
+            showLoginForm();
+            console.log('✅ Готов к работе!');
+        };
+		        // ===== ФУНКЦИИ ПЕРЕКЛЮЧЕНИЯ ЧАТЫ/ДРУЗЬЯ =====
+        function showAllChats() {
+            console.log('💬 Показываю чаты');
+            
+            // Меняем цвета кнопок
+            const chatsBtn = document.querySelector('.chats-tab');
+            const friendsBtn = document.querySelector('.friends-tab');
+            
+            if (chatsBtn && friendsBtn) {
+                chatsBtn.style.background = '#667eea';
+                chatsBtn.style.color = 'white';
+                friendsBtn.style.background = '#f0f0f0';
+                friendsBtn.style.color = '#333';
+            }
+            
+            // Показываем чаты, скрываем друзей
+            document.getElementById('chatsList').style.display = 'block';
+            document.getElementById('friendsList').style.display = 'none';
+        }
+
+        function showMyFriends() {
+            console.log('👥 Показываю список друзей');
+            
+            // Меняем цвета кнопок
+            const chatsBtn = document.querySelector('.chats-tab');
+            const friendsBtn = document.querySelector('.friends-tab');
+            
+            if (chatsBtn && friendsBtn) {
+                friendsBtn.style.background = '#667eea';
+                friendsBtn.style.color = 'white';
+                chatsBtn.style.background = '#f0f0f0';
+                chatsBtn.style.color = '#333';
+            }
+            
+            // Показываем друзей, скрываем чаты
+            document.getElementById('chatsList').style.display = 'none';
+            document.getElementById('friendsList').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
