@@ -3,7 +3,6 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-const PORT = 3000;
 
 // Middleware (промежуточное ПО)
 app.use(cors()); // Разрешаем запросы с других доменов (потом с фронтенда)
