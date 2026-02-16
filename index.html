@@ -951,6 +951,74 @@
         .hidden {
             display: none !important;
         }
+        
+        /* Мобильная адаптация */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            
+            .container {
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .left-panel {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 2;
+                transform: translateX(0);
+                transition: transform 0.3s ease;
+                min-width: 100%;
+                max-width: 100%;
+            }
+            
+            .left-panel.hidden-for-mobile {
+                transform: translateX(-100%);
+            }
+            
+            .right-panel {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 3;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .right-panel.show-for-mobile {
+                transform: translateX(0);
+            }
+            
+            .back-button {
+                display: flex;
+            }
+            
+            .chat-header {
+                padding: 15px 20px;
+            }
+            
+            .messages-container {
+                padding: 20px;
+            }
+            
+            .message-input-container {
+                padding: 15px 20px;
+            }
+            
+            .message-input-wrapper {
+                gap: 10px;
+            }
+            
+            .send-btn {
+                padding: 15px 25px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1002,7 +1070,7 @@
         <!-- ОСНОВНОЙ ИНТЕРФЕЙС МЕССЕНДЖЕРА -->
         <div class="main-screen" id="mainScreen">
             <!-- ЛЕВАЯ ПАНЕЛЬ -->
-            <div class="left-panel">
+            <div class="left-panel" id="leftPanel">
                 <!-- ПРОФИЛЬ -->
                 <div class="profile-header">
                     <div class="profile-row">
@@ -1052,9 +1120,10 @@
             </div>
             
             <!-- ПРАВАЯ ПАНЕЛЬ -->
-            <div class="right-panel">
+            <div class="right-panel" id="rightPanel">
                 <!-- ХЕДЕР ЧАТА -->
                 <div class="chat-header">
+                    <button class="back-button" id="backButton" onclick="goBackToChats()">←</button>
                     <div class="chat-header-info">
                         <div class="chat-header-avatar" id="currentChatAvatar">💬</div>
                         <div class="chat-header-text">
@@ -1069,7 +1138,13 @@
                 </div>
                 
                 <!-- ОКНО СООБЩЕНИЙ -->
-                <div class="messages-container" id="messagesContainer"></div>
+                <div class="messages-container" id="messagesContainer">
+                    <div class="empty-chat">
+                        <div class="icon">💬</div>
+                        <h3>Начните общение</h3>
+                        <p>Выберите чат или друга</p>
+                    </div>
+                </div>
                 
                 <!-- ФОРМА ОТПРАВКИ СООБЩЕНИЙ -->
                 <div class="message-input-container">
@@ -1180,17 +1255,20 @@
     <div id="chatMenuModal" class="chat-menu-modal" style="display: none;"></div>
 
     <script>
-        // ===== НАСТРОЙКИ СЕРВЕРА =====
+        // ===== ОТЛАДКА =====
+        console.log('🇷🇺 Российский Национальный Чат загружен');
+        
+        // ===== НАСТРОЙКИ СЕРВЕРА (НОВЫЕ) =====
         const SERVER_URL = window.location.origin;
         let currentUser = null;
         let currentChat = null;
+        let currentChatMenuTarget = null;
         let onlineUsers = new Set();
-
-        // ===== ДЛЯ СОВМЕСТИМОСТИ СО СТАРЫМ КОДОМ =====
         let usersDatabase = [];
         let userData = {};
         let currentUserPrivateKey = null;
-        let currentChatMenuTarget = null;
+
+        // ===== ДОСТУПНЫЕ АВАТАРЫ =====
         const AVATAR_EMOJIS = ['😀', '😎', '🥳', '😺', '🐶', '🐱', '🐼', '🦊', '🐸', '🐨', 
                                '🦁', '🐮', '🐷', '🐙', '🦄', '🐧', '🐦', '🐤', '🐌', '🐞'];
 
@@ -1199,142 +1277,7 @@
         function setUserOffline(userId) { onlineUsers.delete(userId); }
         function isUserOnline(userId) { return onlineUsers.has(userId); }
 
-        // ===== ФУНКЦИИ АВТОРИЗАЦИИ =====
-        function showLoginForm() {
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('registerForm').classList.add('hidden');
-            document.querySelectorAll('.auth-tab')[0].classList.add('active');
-            document.querySelectorAll('.auth-tab')[1].classList.remove('active');
-        }
-
-        function showRegisterForm() {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('registerForm').classList.remove('hidden');
-            document.querySelectorAll('.auth-tab')[0].classList.remove('active');
-            document.querySelectorAll('.auth-tab')[1].classList.add('active');
-        }
-
-        function showStatus(message, type = 'error') {
-            const statusEl = document.getElementById('statusMessage');
-            statusEl.textContent = message;
-            statusEl.className = `status-message status-${type}`;
-            if (type !== 'error') {
-                setTimeout(() => {
-                    statusEl.className = 'status-message';
-                }, 3000);
-            }
-        }
-
-        // ===== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ЗАПРОСОВ =====
-        async function apiRequest(url, method = 'GET', body = null) {
-            try {
-                const options = { method, headers: { 'Content-Type': 'application/json' } };
-                if (body) options.body = JSON.stringify(body);
-                const res = await fetch(SERVER_URL + url, options);
-                return await res.json();
-            } catch (e) {
-                console.error('Ошибка API:', e);
-                return { error: 'Сервер не отвечает' };
-            }
-        }
-
-        // ===== РЕГИСТРАЦИЯ =====
-        async function register() {
-            const username = document.getElementById('registerUsername').value.trim();
-            const password = document.getElementById('registerPassword').value.trim();
-            if (!username || !password) return showStatus('Заполните все поля', 'error');
-
-            const data = await apiRequest('/register', 'POST', { username, password });
-            if (data.error) return showStatus(data.error, 'error');
-
-            showStatus('Аккаунт создан!', 'success');
-            document.getElementById('loginUsername').value = username;
-            document.getElementById('loginPassword').value = password;
-            setTimeout(showLoginForm, 1000);
-        }
-
-        // ===== ВХОД =====
-        async function login() {
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value.trim();
-            if (!username || !password) return showStatus('Заполните все поля', 'error');
-
-            const data = await apiRequest('/login', 'POST', { username, password });
-            if (data.error) return showStatus(data.error, 'error');
-
-            currentUser = data.user;
-            document.getElementById('authScreen').classList.add('hidden');
-            document.getElementById('mainScreen').classList.add('active');
-            
-            // Загружаем данные пользователя
-            document.getElementById('userAvatarLarge').textContent = currentUser.avatar || '😀';
-            document.getElementById('profileUserName').textContent = currentUser.firstName || currentUser.username;
-            document.getElementById('profileUserInfo').textContent = `@${currentUser.username} • ID: ${currentUser.id}`;
-            if (currentUser.bio) {
-                document.getElementById('profileBio').textContent = currentUser.bio;
-                document.getElementById('profileBio').style.display = 'block';
-            }
-            
-            setUserOnline(currentUser.id);
-            await loadInitialData();
-        }
-
-        // ===== ВЫХОД =====
-        function logout() {
-            if (currentUser) setUserOffline(currentUser.id);
-            currentUser = null;
-            currentChat = null;
-            document.getElementById('authScreen').classList.remove('hidden');
-            document.getElementById('mainScreen').classList.remove('active');
-            document.getElementById('chatsList').innerHTML = '';
-            document.getElementById('friendsList').innerHTML = '';
-        }
-
-        // ===== ЗАГРУЗКА ДАННЫХ =====
-        async function loadInitialData() {
-            await loadAllUsers();
-            await loadFriends();
-            await loadFriendRequests();
-            await loadChats();
-        }
-
-        async function loadAllUsers() {
-            const data = await apiRequest(`/users/${currentUser.id}`);
-            if (data.users) {
-                usersDatabase = data.users.map(u => ({ id: u.id, username: u.username, avatar: u.avatar }));
-            }
-        }
-
-        async function loadFriends() {
-            const data = await apiRequest(`/friends/${currentUser.id}`);
-            if (data.friends) {
-                if (!userData[currentUser.id]) userData[currentUser.id] = {};
-                userData[currentUser.id].friends = data.friends.map(f => ({ id: f.id, username: f.username }));
-            }
-        }
-
-        async function loadFriendRequests() {
-            const data = await apiRequest(`/friend-requests/${currentUser.id}`);
-            if (data.requests) {
-                if (!userData[currentUser.id]) userData[currentUser.id] = {};
-                userData[currentUser.id].friendRequests = data.requests.map(r => ({ 
-                    id: r.id, 
-                    username: r.username,
-                    direction: 'incoming' 
-                }));
-            }
-        }
-
-        async function loadChats() {
-            const data = await apiRequest(`/chats/${currentUser.id}`);
-            if (data.chats) {
-                if (!userData[currentUser.id]) userData[currentUser.id] = {};
-                userData[currentUser.id].chats = data.chats;
-                displayChats();
-            }
-        }
-
-        // ===== КРИПТОГРАФИЧЕСКИЕ ФУНКЦИИ =====
+        // ===== КРИПТОГРАФИЧЕСКИЕ ФУНКЦИИ (ОРИГИНАЛЬНЫЕ) =====
         async function generateKeyPair() {
             const keyPair = await window.crypto.subtle.generateKey(
                 {
@@ -1414,28 +1357,238 @@
             }
         }
 
-        // ===== ЗАГРУЗКА ДАННЫХ ИЗ localStorage (оставлено для совместимости) =====
+        // ===== ЗАГРУЗКА ДАННЫХ ИЗ localStorage (ОРИГИНАЛЬНЫЕ) =====
         async function loadFromStorage() {
-            console.log('💾 Используется сервер, localStorage не требуется');
-            return;
+            console.log('💾 Загружаю данные из localStorage...');
+            
+            const savedUsers = localStorage.getItem('didi_users_e2ee_final');
+            if (savedUsers) {
+                usersDatabase = JSON.parse(savedUsers);
+                console.log(`✅ Загружено ${usersDatabase.length} пользователей`);
+                
+                let needsUpdate = false;
+                for (let user of usersDatabase) {
+                    if (!user.publicKey) {
+                        needsUpdate = true;
+                        const keyPair = await generateKeyPair();
+                        user.publicKey = await exportPublicKey(keyPair.publicKey);
+                        user.privateKey = await exportPrivateKey(keyPair.privateKey);
+                    }
+                }
+                if (needsUpdate) saveToStorage();
+            } else {
+                const adminKeys = await generateKeyPair();
+                const adminPublicKey = await exportPublicKey(adminKeys.publicKey);
+                const adminPrivateKey = await exportPrivateKey(adminKeys.privateKey);
+                
+                const testKeys = await generateKeyPair();
+                const testPublicKey = await exportPublicKey(testKeys.publicKey);
+                const testPrivateKey = await exportPrivateKey(testKeys.privateKey);
+                
+                usersDatabase = [
+                    { 
+                        id: 1, 
+                        username: 'admin', 
+                        password: 'admin123',
+                        publicKey: adminPublicKey,
+                        privateKey: adminPrivateKey
+                    },
+                    { 
+                        id: 2, 
+                        username: 'test_user', 
+                        password: '12345',
+                        publicKey: testPublicKey,
+                        privateKey: testPrivateKey
+                    }
+                ];
+                saveToStorage();
+            }
+            
+            const savedUserData = localStorage.getItem('didi_userdata_e2ee_final');
+            if (savedUserData) {
+                userData = JSON.parse(savedUserData);
+                console.log(`✅ Загружены данные пользователей`);
+            } else {
+                userData = {
+                    1: {
+                        friends: [],
+                        friendRequests: [],
+                        chats: [],
+                        messages: {},
+                        readMessages: {},
+                        profile: { firstName: '', lastName: '', bio: '', avatar: '😀' },
+                        pinnedChats: [],
+                        deletedChats: []
+                    },
+                    2: {
+                        friends: [],
+                        friendRequests: [],
+                        chats: [],
+                        messages: {},
+                        readMessages: {},
+                        profile: { firstName: '', lastName: '', bio: '', avatar: '😎' },
+                        pinnedChats: [],
+                        deletedChats: []
+                    }
+                };
+                saveToStorage();
+            }
         }
 
         function saveToStorage() {
-            // Данные теперь на сервере
-        }
-    </script>
-    <script>
-        // ===== ГЛАВНЫЙ ИНТЕРФЕЙС =====
-        function showMainInterface() {
-            document.getElementById('authScreen').classList.add('hidden');
-            document.getElementById('mainScreen').classList.add('active');
+            console.log('💾 Сохраняю данные в localStorage...');
+            localStorage.setItem('didi_users_e2ee_final', JSON.stringify(usersDatabase));
+            localStorage.setItem('didi_userdata_e2ee_final', JSON.stringify(userData));
         }
 
-        // ===== ФУНКЦИИ ПРОФИЛЯ =====
+        // ===== НОВЫЕ СЕРВЕРНЫЕ ФУНКЦИИ =====
+        async function apiRequest(url, method = 'GET', body = null) {
+            try {
+                const options = { method, headers: { 'Content-Type': 'application/json' } };
+                if (body) options.body = JSON.stringify(body);
+                const res = await fetch(SERVER_URL + url, options);
+                return await res.json();
+            } catch (e) {
+                console.error('Ошибка API:', e);
+                return { error: 'Сервер не отвечает' };
+            }
+        }
+
+        async function register() {
+            console.log('🔄 Регистрация через сервер...');
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value.trim();
+            
+            if (!username || !password) {
+                showStatus('Заполните все поля', 'error');
+                return;
+            }
+            
+            const data = await apiRequest('/register', 'POST', { username, password });
+            
+            if (data.error) {
+                showStatus(data.error, 'error');
+                return;
+            }
+            
+            showStatus('Аккаунт создан! Входите', 'success');
+            document.getElementById('loginUsername').value = username;
+            document.getElementById('loginPassword').value = password;
+            setTimeout(() => showLoginForm(), 1000);
+        }
+
+        async function login() {
+            console.log('🔄 Вход через сервер...');
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            
+            if (!username || !password) {
+                showStatus('Заполните все поля', 'error');
+                return;
+            }
+            
+            const data = await apiRequest('/login', 'POST', { username, password });
+            
+            if (data.error) {
+                showStatus(data.error, 'error');
+                return;
+            }
+            
+            console.log('✅ Вход успешен!', data.user);
+            currentUser = data.user;
+            
+            if (user.privateKey) {
+                currentUserPrivateKey = await importPrivateKey(user.privateKey);
+                console.log('✅ Приватный ключ загружен');
+            }
+            
+            if (!userData[currentUser.id]) {
+                userData[currentUser.id] = {
+                    friends: [],
+                    friendRequests: [],
+                    chats: [],
+                    messages: {},
+                    readMessages: {},
+                    profile: { firstName: '', lastName: '', bio: '', avatar: '😀' },
+                    pinnedChats: [],
+                    deletedChats: []
+                };
+                saveToStorage();
+            }
+            
+            setUserOnline(currentUser.id);
+            
+            showMainInterface();
+            loadUserData();
+            showStatus(`Добро пожаловать, ${username}! 🔐`, 'success');
+        }
+
+        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ АВТОРИЗАЦИИ (оставлены для совместимости) =====
+        function showLoginForm() {
+            console.log('📝 Показываю форму входа');
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.querySelectorAll('.auth-tab')[0].classList.add('active');
+            document.querySelectorAll('.auth-tab')[1].classList.remove('active');
+        }
+        
+        function showRegisterForm() {
+            console.log('📝 Показываю форму регистрации');
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+            document.querySelectorAll('.auth-tab')[0].classList.remove('active');
+            document.querySelectorAll('.auth-tab')[1].classList.add('active');
+        }
+        
+        function showStatus(message, type = 'error') {
+            console.log(`📢 Статус: ${message} (${type})`);
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message status-${type}`;
+            
+            if (type !== 'error') {
+                setTimeout(() => {
+                    statusEl.className = 'status-message';
+                }, 3000);
+            }
+        }
+        
+        function logout() {
+            console.log('🚪 Выход из системы');
+            
+            if (currentUser) {
+                setUserOffline(currentUser.id);
+            }
+            
+            currentUser = null;
+            currentChat = null;
+            currentUserPrivateKey = null;
+            currentChatMenuTarget = null;
+            
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('mainScreen').classList.remove('active');
+            
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            showLoginForm();
+        }
+        
+        function showMainInterface() {
+            console.log('🖥️ Показываю главный интерфейс');
+            
+            const authScreen = document.getElementById('authScreen');
+            const mainScreen = document.getElementById('mainScreen');
+            
+            authScreen.classList.add('hidden');
+            mainScreen.classList.add('active');
+        }
+        
+        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ПРОФИЛЯ =====
         function loadUserData() {
+            console.log('👤 Загружаю данные пользователя');
             if (!currentUser) return;
             
-            const profile = userData[currentUser.id]?.profile || { firstName: '', lastName: '', bio: '', avatar: '😀' };
+            const profile = userData[currentUser.id].profile || { firstName: '', lastName: '', bio: '', avatar: '😀' };
             
             document.getElementById('userAvatarLarge').textContent = profile.avatar || '😀';
             
@@ -1453,12 +1606,14 @@
             } else {
                 bioEl.style.display = 'none';
             }
+            
+            displayChats();
         }
-
+        
         function openProfileSettings() {
             console.log('⚙️ Открываю настройки профиля');
             
-            const profile = userData[currentUser.id]?.profile || { firstName: '', lastName: '', bio: '', avatar: '😀' };
+            const profile = userData[currentUser.id].profile || { firstName: '', lastName: '', bio: '', avatar: '😀' };
             
             document.getElementById('profileFirstName').value = profile.firstName || '';
             document.getElementById('profileLastName').value = profile.lastName || '';
@@ -1481,8 +1636,8 @@
             
             document.getElementById('profileSettingsModal').classList.add('active');
         }
-
-        async function saveProfileSettings() {
+        
+        function saveProfileSettings() {
             const firstName = document.getElementById('profileFirstName').value.trim();
             const lastName = document.getElementById('profileLastName').value.trim();
             const bio = document.getElementById('profileBio').value.trim();
@@ -1490,17 +1645,9 @@
             const selectedAvatar = document.querySelector('.avatar-option.selected');
             const avatar = selectedAvatar ? selectedAvatar.textContent : '😀';
             
-            // Сохраняем на сервер
-            await apiRequest('/user/update', 'POST', {
-                userId: currentUser.id,
-                firstName,
-                lastName,
-                bio,
-                avatar
-            });
-            
-            if (!userData[currentUser.id]) userData[currentUser.id] = {};
-            if (!userData[currentUser.id].profile) userData[currentUser.id].profile = {};
+            if (!userData[currentUser.id].profile) {
+                userData[currentUser.id].profile = {};
+            }
             
             userData[currentUser.id].profile = {
                 firstName,
@@ -1509,17 +1656,20 @@
                 avatar
             };
             
+            saveToStorage();
             loadUserData();
             closeProfileSettingsModal();
             showStatus('✅ Профиль обновлён', 'success');
         }
-
+        
         function closeProfileSettingsModal() {
             document.getElementById('profileSettingsModal').classList.remove('active');
         }
-
-        // ===== ФУНКЦИИ ДРУЗЕЙ =====
-        async function openAddFriend() {
+        
+        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ДОБАВЛЕНИЯ ДРУЗЕЙ =====
+        function openAddFriend() {
+            console.log('👤 Открываю окно добавления друга');
+            
             const friendUsername = prompt('Введите НИК пользователя, которого хотите добавить в друзья:');
             
             if (!friendUsername) return;
@@ -1534,43 +1684,209 @@
                 return;
             }
             
-            const result = await apiRequest('/friend-request', 'POST', {
-                fromUserId: currentUser.id,
-                toUserId: friendUser.id
-            });
+            const userFriends = userData[currentUser.id].friends;
+            const userRequests = userData[currentUser.id].friendRequests;
             
-            if (result.error) {
-                alert(result.error);
-            } else {
-                alert(`✅ Заявка в друзья отправлена пользователю ${friendUsername}`);
+            if (userFriends.find(f => f.id === friendUser.id)) {
+                alert(`❌ Пользователь ${friendUsername} уже у вас в друзьях`);
+                return;
             }
+            
+            if (userRequests.find(r => r.id === friendUser.id && r.direction === 'outgoing')) {
+                alert(`❌ Заявка пользователю ${friendUsername} уже отправлена`);
+                return;
+            }
+            
+            const outgoingRequest = {
+                id: friendUser.id,
+                username: friendUser.username,
+                status: 'pending',
+                direction: 'outgoing',
+                timestamp: Date.now()
+            };
+            userData[currentUser.id].friendRequests.push(outgoingRequest);
+            
+            if (!userData[friendUser.id]) {
+                userData[friendUser.id] = { 
+                    friends: [], 
+                    friendRequests: [], 
+                    chats: [], 
+                    messages: {},
+                    readMessages: {},
+                    profile: { avatar: '😀' },
+                    pinnedChats: [],
+                    deletedChats: []
+                };
+            }
+            
+            const incomingRequest = {
+                id: currentUser.id,
+                username: currentUser.username,
+                status: 'pending',
+                direction: 'incoming',
+                timestamp: Date.now()
+            };
+            userData[friendUser.id].friendRequests.push(incomingRequest);
+            
+            const pendingChat = {
+                id: 'pending_' + Date.now(),
+                name: friendUser.username,
+                userId: friendUser.id,
+                type: 'pending',
+                lastMessage: '⏳ Ожидание подтверждения заявки',
+                lastMessageTime: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                unread: 0,
+                isDeleted: false
+            };
+            
+            userData[currentUser.id].chats.push(pendingChat);
+            
+            saveToStorage();
+            
+            console.log('✅ Заявка отправлена:', outgoingRequest);
+            alert(`✅ Заявка в друзья отправлена пользователю ${friendUsername}`);
+            displayChats();
         }
-
+        
         function cancelFriendRequest(username) {
-            alert('Функция отмены заявки в разработке');
-        }
-
-        async function acceptFriendRequest(username) {
+            console.log(`❌ Отменяю заявку пользователю ${username}`);
+            
             const friendUser = usersDatabase.find(u => u.username === username);
             if (!friendUser) return;
             
-            await apiRequest('/accept-friend', 'POST', {
-                fromUserId: friendUser.id,
-                toUserId: currentUser.id
+            userData[currentUser.id].friendRequests = 
+                userData[currentUser.id].friendRequests.filter(r => !(r.id === friendUser.id && r.direction === 'outgoing'));
+            
+            if (userData[friendUser.id]) {
+                userData[friendUser.id].friendRequests = 
+                    userData[friendUser.id].friendRequests.filter(r => !(r.id === currentUser.id && r.direction === 'incoming'));
+            }
+            
+            userData[currentUser.id].chats = 
+                userData[currentUser.id].chats.filter(c => !(c.type === 'pending' && c.name === username));
+            
+            saveToStorage();
+            displayChats();
+            
+            document.getElementById('currentChatTitle').textContent = 'Выберите чат';
+            document.getElementById('currentChatAvatar').textContent = '💬';
+            document.getElementById('currentChatParticipants').textContent = 'или начните новое общение';
+            document.getElementById('messagesContainer').innerHTML = '';
+            
+            alert(`✅ Заявка пользователю ${username} отменена`);
+        }
+        
+        async function acceptFriendRequest(username) {
+            console.log(`✅ Принимаю заявку от ${username}`);
+            
+            const friendUser = usersDatabase.find(u => u.username === username);
+            if (!friendUser) return;
+            
+            userData[currentUser.id].friendRequests = 
+                userData[currentUser.id].friendRequests.filter(r => !(r.id === friendUser.id && r.direction === 'incoming'));
+            
+            if (userData[friendUser.id]) {
+                userData[friendUser.id].friendRequests = 
+                    userData[friendUser.id].friendRequests.filter(r => !(r.id === currentUser.id && r.direction === 'outgoing'));
+            }
+            
+            userData[currentUser.id].friends.push({
+                id: friendUser.id,
+                username: friendUser.username,
+                addedAt: Date.now()
             });
             
-            await loadFriends();
-            await loadFriendRequests();
-            displayFriends();
-            alert(`✅ Вы приняли заявку в друзья от ${username}`);
+            if (!userData[friendUser.id]) {
+                userData[friendUser.id] = { 
+                    friends: [], 
+                    friendRequests: [], 
+                    chats: [], 
+                    messages: {},
+                    readMessages: {},
+                    profile: { avatar: '😀' },
+                    pinnedChats: [],
+                    deletedChats: []
+                };
+            }
+            
+            userData[friendUser.id].friends.push({
+                id: currentUser.id,
+                username: currentUser.username,
+                addedAt: Date.now()
+            });
+            
+            const chatId = 'chat_' + [currentUser.id, friendUser.id].sort().join('_');
+            
+            if (!userData[currentUser.id].messages) userData[currentUser.id].messages = {};
+            if (!userData[friendUser.id].messages) userData[friendUser.id].messages = {};
+            if (!userData[currentUser.id].readMessages) userData[currentUser.id].readMessages = {};
+            if (!userData[friendUser.id].readMessages) userData[friendUser.id].readMessages = {};
+            
+            userData[currentUser.id].messages[chatId] = userData[currentUser.id].messages[chatId] || [];
+            userData[friendUser.id].messages[chatId] = userData[friendUser.id].messages[chatId] || [];
+            userData[currentUser.id].readMessages[chatId] = userData[currentUser.id].readMessages[chatId] || {};
+            userData[friendUser.id].readMessages[chatId] = userData[friendUser.id].readMessages[chatId] || {};
+            
+            const userChat = {
+                id: chatId,
+                name: friendUser.username,
+                userId: friendUser.id,
+                type: 'private',
+                lastMessage: '✅ Вы теперь друзья! (E2EE)',
+                lastMessageTime: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                unread: 0,
+                isDeleted: false
+            };
+            
+            userData[currentUser.id].chats = 
+                userData[currentUser.id].chats.filter(c => !(c.type === 'pending' && c.name === username));
+            userData[currentUser.id].chats.push(userChat);
+            
+            if (userData[friendUser.id]) {
+                const friendChat = {
+                    id: chatId,
+                    name: currentUser.username,
+                    userId: currentUser.id,
+                    type: 'private',
+                    lastMessage: '✅ Вы теперь друзья! (E2EE)',
+                    lastMessageTime: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                    unread: 1,
+                    isDeleted: false
+                };
+                
+                userData[friendUser.id].chats = 
+                    userData[friendUser.id].chats.filter(c => !(c.type === 'pending' && c.name === currentUser.username));
+                userData[friendUser.id].chats.push(friendChat);
+            }
+            
+            saveToStorage();
+            displayChats();
+            alert(`✅ Вы приняли заявку в друзья от ${username}\n🔐 Все сообщения будут зашифрованы!`);
         }
-
+        
         function ignoreFriendRequest(username) {
-            alert('Функция игнорирования в разработке');
+            console.log(`❌ Игнорирую заявку от ${username}`);
+            
+            const friendUser = usersDatabase.find(u => u.username === username);
+            if (!friendUser) return;
+            
+            userData[currentUser.id].friendRequests = 
+                userData[currentUser.id].friendRequests.filter(r => !(r.id === friendUser.id && r.direction === 'incoming'));
+            
+            if (userData[friendUser.id]) {
+                userData[friendUser.id].friendRequests = 
+                    userData[friendUser.id].friendRequests.filter(r => !(r.id === currentUser.id && r.direction === 'outgoing'));
+            }
+            
+            saveToStorage();
+            displayFriends();
+            alert(`❌ Заявка от ${username} отклонена`);
         }
-
-        // ===== ФУНКЦИИ ГРУППОВЫХ ЧАТОВ =====
+        
+        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ГРУППОВЫХ ЧАТОВ =====
         function openCreateGroupChat() {
+            console.log('👥 Открываю окно создания группового чата');
+            
             const friends = userData[currentUser.id]?.friends || [];
             
             if (friends.length === 0) {
@@ -1586,7 +1902,7 @@
                 friendEl.className = 'friend-item';
                 friendEl.innerHTML = `
                     <input type="checkbox" class="friend-checkbox" data-userid="${friend.id}" data-username="${friend.username}">
-                    <div class="friend-avatar">${friend.avatar || '😀'}</div>
+                    <div class="friend-avatar">${userData[friend.id]?.profile?.avatar || '😀'}</div>
                     <div class="friend-info">
                         <div class="friend-name">${friend.username}</div>
                     </div>
@@ -1597,23 +1913,222 @@
             document.getElementById('groupNameInput').value = '';
             document.getElementById('groupChatModal').classList.add('active');
         }
-
+        
         function closeGroupChatModal() {
             document.getElementById('groupChatModal').classList.remove('active');
         }
-
+        
         async function createGroupChat() {
-            alert('Групповые чаты в разработке');
-        }
-
-        // ===== ФУНКЦИИ ЧАТОВ =====
-        function openChatMenu(chatId, event) {
-            event.stopPropagation();
+            const groupName = document.getElementById('groupNameInput').value.trim();
+            if (!groupName) {
+                alert('❌ Введите название группы');
+                return;
+            }
             
-            const chat = userData[currentUser.id].chats.find(c => c.id === chatId);
-            if (!chat) return;
+            const checkboxes = document.querySelectorAll('#friendsListForGroup .friend-checkbox:checked');
+            
+            if (checkboxes.length < 2) {
+                alert('❌ Выберите минимум 2 друзей для группового чата');
+                return;
+            }
+            
+            const selectedFriends = [];
+            checkboxes.forEach(cb => {
+                selectedFriends.push({
+                    id: parseInt(cb.dataset.userid),
+                    username: cb.dataset.username
+                });
+            });
+            
+            const chatId = 'group_' + Date.now() + '_' + currentUser.id;
+            
+            const allParticipants = [
+                { id: currentUser.id, username: currentUser.username },
+                ...selectedFriends
+            ];
+            
+            allParticipants.forEach(participant => {
+                if (!userData[participant.id]) {
+                    userData[participant.id] = {
+                        friends: [],
+                        friendRequests: [],
+                        chats: [],
+                        messages: {},
+                        readMessages: {},
+                        profile: { avatar: '😀' },
+                        pinnedChats: [],
+                        deletedChats: []
+                    };
+                }
+                
+                if (!userData[participant.id].messages) userData[participant.id].messages = {};
+                if (!userData[participant.id].messages[chatId]) {
+                    userData[participant.id].messages[chatId] = [];
+                }
+                if (!userData[participant.id].readMessages) userData[participant.id].readMessages = {};
+                if (!userData[participant.id].readMessages[chatId]) {
+                    userData[participant.id].readMessages[chatId] = {};
+                }
+                
+                const participantNames = allParticipants
+                    .filter(p => p.id !== participant.id)
+                    .map(p => p.username)
+                    .join(', ');
+                
+                const chat = {
+                    id: chatId,
+                    name: groupName,
+                    type: 'group',
+                    participants: allParticipants.map(p => ({ id: p.id, username: p.username })),
+                    lastMessage: '✅ Групповой чат создан',
+                    lastMessageTime: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                    unread: participant.id === currentUser.id ? 0 : 1,
+                    createdBy: currentUser.id,
+                    isDeleted: false
+                };
+                
+                userData[participant.id].chats.push(chat);
+            });
+            
+            saveToStorage();
+            closeGroupChatModal();
+            displayChats();
+            
+            const newChat = userData[currentUser.id].chats.find(c => c.id === chatId);
+            if (newChat) {
+                selectChat(newChat);
+            }
+            
+            alert(`✅ Групповой чат "${groupName}" создан!`);
+        }
+        
+        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ДОБАВЛЕНИЯ УЧАСТНИКОВ В ГРУППУ =====
+        function openAddGroupMemberModal(chat) {
+            console.log('👥 Открываю окно добавления участников в группу', chat);
+            
+            const friends = userData[currentUser.id]?.friends || [];
+            const currentParticipants = chat.participants || [];
+            const currentParticipantIds = currentParticipants.map(p => p.id);
+            
+            const availableFriends = friends.filter(friend => !currentParticipantIds.includes(friend.id));
+            
+            if (availableFriends.length === 0) {
+                alert('❌ Все ваши друзья уже в этой группе');
+                return;
+            }
+            
+            const friendsListEl = document.getElementById('friendsListForGroupAdd');
+            friendsListEl.innerHTML = '';
+            
+            availableFriends.forEach(friend => {
+                const friendEl = document.createElement('div');
+                friendEl.className = 'friend-item';
+                friendEl.innerHTML = `
+                    <input type="checkbox" class="friend-checkbox" data-userid="${friend.id}" data-username="${friend.username}">
+                    <div class="friend-avatar">${userData[friend.id]?.profile?.avatar || '😀'}</div>
+                    <div class="friend-info">
+                        <div class="friend-name">${friend.username}</div>
+                    </div>
+                `;
+                friendsListEl.appendChild(friendEl);
+            });
             
             currentChatMenuTarget = chat;
+            document.getElementById('addGroupMemberModal').classList.add('active');
+        }
+        
+        function closeAddGroupMemberModal() {
+            document.getElementById('addGroupMemberModal').classList.remove('active');
+        }
+        
+        async function addMembersToGroup() {
+            if (!currentChatMenuTarget) return;
+            
+            const checkboxes = document.querySelectorAll('#friendsListForGroupAdd .friend-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                alert('❌ Выберите хотя бы одного друга');
+                return;
+            }
+            
+            const selectedFriends = [];
+            checkboxes.forEach(cb => {
+                selectedFriends.push({
+                    id: parseInt(cb.dataset.userid),
+                    username: cb.dataset.username
+                });
+            });
+            
+            const chatId = currentChatMenuTarget.id;
+            
+            const allParticipants = [...currentChatMenuTarget.participants, ...selectedFriends];
+            
+            allParticipants.forEach(participant => {
+                if (userData[participant.id]) {
+                    const participantChat = userData[participant.id].chats.find(c => c.id === chatId);
+                    if (participantChat) {
+                        participantChat.participants = allParticipants;
+                        participantChat.lastMessage = `👥 ${currentUser.username} добавил(а) ${selectedFriends.map(f => f.username).join(', ')}`;
+                        participantChat.lastMessageTime = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                    }
+                }
+            });
+            
+            selectedFriends.forEach(friend => {
+                if (!userData[friend.id]) {
+                    userData[friend.id] = {
+                        friends: [],
+                        friendRequests: [],
+                        chats: [],
+                        messages: {},
+                        readMessages: {},
+                        profile: { avatar: '😀' },
+                        pinnedChats: [],
+                        deletedChats: []
+                    };
+                }
+                
+                if (!userData[friend.id].messages) userData[friend.id].messages = {};
+                if (!userData[friend.id].messages[chatId]) {
+                    userData[friend.id].messages[chatId] = [];
+                }
+                if (!userData[friend.id].readMessages) userData[friend.id].readMessages = {};
+                if (!userData[friend.id].readMessages[chatId]) {
+                    userData[friend.id].readMessages[chatId] = {};
+                }
+                
+                const newChat = {
+                    id: chatId,
+                    name: currentChatMenuTarget.name,
+                    type: 'group',
+                    participants: allParticipants,
+                    lastMessage: `👥 ${currentUser.username} добавил(а) вас в группу`,
+                    lastMessageTime: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                    unread: 1,
+                    createdBy: currentChatMenuTarget.createdBy,
+                    isDeleted: false
+                };
+                
+                userData[friend.id].chats.push(newChat);
+            });
+            
+            saveToStorage();
+            closeAddGroupMemberModal();
+            
+            if (currentChat?.id === chatId) {
+                selectChat(userData[currentUser.id].chats.find(c => c.id === chatId));
+            }
+            
+            displayChats();
+            alert(`✅ Участники добавлены в группу`);
+        }
+		        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ЧАТОВ =====
+        function openChatMenu(chatId, event) {
+            event.stopPropagation();
+            console.log('📌 Открываю меню чата', chatId);
+            
+            currentChatMenuTarget = userData[currentUser.id].chats.find(c => c.id === chatId);
+            if (!currentChatMenuTarget) return;
             
             const menu = document.getElementById('chatMenuModal');
             const isPinned = userData[currentUser.id].pinnedChats?.includes(chatId);
@@ -1624,6 +2139,10 @@
                 menu.innerHTML += '<div class="chat-menu-item" onclick="unpinChat()">📌 Открепить</div>';
             } else {
                 menu.innerHTML += '<div class="chat-menu-item" onclick="pinChat()">📌 Закрепить выше всех</div>';
+            }
+            
+            if (currentChatMenuTarget.type === 'group') {
+                menu.innerHTML += '<div class="chat-menu-item" onclick="openAddGroupMemberModal(currentChatMenuTarget)">👥 Добавить участников</div>';
             }
             
             menu.innerHTML += '<div class="chat-menu-item" onclick="clearChatHistory()">🗑️ Удалить переписку</div>';
@@ -1637,69 +2156,63 @@
                 document.addEventListener('click', closeChatMenuOnClickOutside);
             }, 10);
         }
-
+        
         function closeChatMenuOnClickOutside(e) {
             const menu = document.getElementById('chatMenuModal');
             if (menu && !menu.contains(e.target)) {
                 closeChatMenu();
             }
         }
-
+        
         function closeChatMenu() {
             const menu = document.getElementById('chatMenuModal');
             if (menu) menu.style.display = 'none';
             document.removeEventListener('click', closeChatMenuOnClickOutside);
         }
-
-        async function pinChat() {
+        
+        function pinChat() {
             if (!currentChatMenuTarget) return;
-            
-            await apiRequest('/chats/pin', 'POST', {
-                userId: currentUser.id,
-                chatId: currentChatMenuTarget.id
-            });
             
             if (!userData[currentUser.id].pinnedChats) {
                 userData[currentUser.id].pinnedChats = [];
             }
+            
             if (!userData[currentUser.id].pinnedChats.includes(currentChatMenuTarget.id)) {
                 userData[currentUser.id].pinnedChats.push(currentChatMenuTarget.id);
             }
             
+            saveToStorage();
             displayChats();
             closeChatMenu();
             showStatus('📌 Чат закреплён', 'success');
         }
-
-        async function unpinChat() {
+        
+        function unpinChat() {
             if (!currentChatMenuTarget) return;
-            
-            await apiRequest('/chats/unpin', 'POST', {
-                userId: currentUser.id,
-                chatId: currentChatMenuTarget.id
-            });
             
             userData[currentUser.id].pinnedChats = userData[currentUser.id].pinnedChats?.filter(id => id !== currentChatMenuTarget.id) || [];
             
+            saveToStorage();
             displayChats();
             closeChatMenu();
             showStatus('📌 Чат откреплён', 'success');
         }
-
+        
         function clearChatHistory() {
             if (!currentChatMenuTarget) return;
             
             if (confirm('🗑️ Очистить всю переписку? Это действие нельзя отменить.')) {
                 const chatId = currentChatMenuTarget.id;
                 
-                if (!userData[currentUser.id].messages) userData[currentUser.id].messages = {};
                 userData[currentUser.id].messages[chatId] = [];
                 
                 const chat = userData[currentUser.id].chats.find(c => c.id === chatId);
                 if (chat) {
                     chat.lastMessage = '✅ Переписка очищена';
-                    chat.lastMessageTime = new Date().toLocaleTimeString();
+                    chat.lastMessageTime = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                 }
+                
+                saveToStorage();
                 
                 if (currentChat?.id === chatId) {
                     loadMessages();
@@ -1710,17 +2223,23 @@
                 showStatus('🗑️ Переписка очищена', 'success');
             }
         }
-
-        async function deleteChat() {
+        
+        function deleteChat() {
             if (!currentChatMenuTarget) return;
             
-            if (confirm('❌ Удалить чат?')) {
+            if (confirm('❌ Удалить чат? Если друг напишет снова, чат восстановится.')) {
                 const chatId = currentChatMenuTarget.id;
                 
-                await apiRequest(`/chats/${chatId}`, 'DELETE');
+                if (!userData[currentUser.id].deletedChats) {
+                    userData[currentUser.id].deletedChats = [];
+                }
+                userData[currentUser.id].deletedChats.push(chatId);
                 
                 userData[currentUser.id].chats = userData[currentUser.id].chats.filter(c => c.id !== chatId);
+                
                 userData[currentUser.id].pinnedChats = userData[currentUser.id].pinnedChats?.filter(id => id !== chatId) || [];
+                
+                saveToStorage();
                 
                 if (currentChat?.id === chatId) {
                     currentChat = null;
@@ -1735,15 +2254,18 @@
                 showStatus('❌ Чат удалён', 'success');
             }
         }
-
+        
         function displayChats() {
             if (!currentUser) return;
             
+            console.log(`📋 Отображаю чаты пользователя ${currentUser.username}`);
+            
             let userChats = userData[currentUser.id]?.chats || [];
             const deletedChats = userData[currentUser.id]?.deletedChats || [];
-            const pinnedChats = userData[currentUser.id]?.pinnedChats || [];
             
             userChats = userChats.filter(chat => !deletedChats.includes(chat.id));
+            
+            const pinnedChats = userData[currentUser.id]?.pinnedChats || [];
             
             userChats.sort((a, b) => {
                 const aPinned = pinnedChats.includes(a.id);
@@ -1757,6 +2279,8 @@
             
             const chatsListEl = document.getElementById('chatsList');
             
+            if (!chatsListEl) return;
+            
             if (userChats.length === 0) {
                 chatsListEl.innerHTML = `
                     <div style="text-align: center; padding: 40px 20px; color: #888;">
@@ -1768,51 +2292,82 @@
                 return;
             }
             
-            let html = '';
+            chatsListEl.innerHTML = '';
+            
             userChats.forEach(chat => {
-                const isActive = currentChat?.id === chat.id;
+                const chatEl = document.createElement('div');
+                chatEl.className = `chat-item ${currentChat?.id === chat.id ? 'active' : ''} ${pinnedChats.includes(chat.id) ? 'pinned' : ''}`;
                 
                 let avatar = '💬';
-                let chatName = chat.name || 'Чат';
+                if (chat.type === 'private' && chat.userId) {
+                    avatar = userData[chat.userId]?.profile?.avatar || '😀';
+                } else if (chat.type === 'group') {
+                    avatar = '👥';
+                } else if (chat.type === 'pending') {
+                    avatar = '⏳';
+                }
                 
-                if (chat.type === 'private' && chat.participants) {
-                    const otherUserId = chat.participants.find(id => id !== currentUser.id);
-                    const otherUser = usersDatabase.find(u => u.id === otherUserId);
-                    if (otherUser) {
-                        chatName = otherUser.username;
-                        avatar = otherUser.avatar || '😀';
+                let onlineStatus = '';
+                if (chat.type === 'private' && chat.userId) {
+                    if (isUserOnline(chat.userId)) {
+                        onlineStatus = '<span class="online-dot"></span>';
+                    } else {
+                        onlineStatus = '<span class="offline-dot"></span>';
                     }
                 }
                 
+                let unreadCount = 0;
+                if (userData[currentUser.id].messages[chat.id]) {
+                    unreadCount = userData[currentUser.id].messages[chat.id].filter(msg => 
+                        msg.senderId !== currentUser.id && 
+                        !userData[currentUser.id].readMessages[chat.id]?.[msg.id]
+                    ).length;
+                }
+                
+                chat.unread = unreadCount;
+                
                 let avatarColor = chat.type === 'group' ? 'linear-gradient(135deg, #ff9800, #f57c00)' : 
+                                chat.type === 'pending' ? '#ffa500' : 
                                 'linear-gradient(135deg, #667eea, #764ba2)';
                 
-                html += `
-                    <div class="chat-item ${isActive ? 'active' : ''} ${pinnedChats.includes(chat.id) ? 'pinned' : ''}" onclick="selectChat('${chat.id}')">
-                        <div class="chat-avatar" style="background: ${avatarColor};">${avatar}</div>
-                        <div class="chat-info">
-                            <div class="chat-info-header">
-                                <span class="chat-name">${chatName}</span>
-                                <span class="chat-time">${chat.lastMessageTime ? new Date(chat.lastMessageTime).toLocaleTimeString().slice(0,5) : ''}</span>
-                            </div>
-                            <div class="chat-last-message">
-                                <span class="chat-message-text">${chat.lastMessage || 'Нет сообщений'}</span>
-                            </div>
-                        </div>
-                        <button class="chat-menu-btn" onclick="openChatMenu('${chat.id}', event)">⋯</button>
+                chatEl.innerHTML = `
+                    <div class="chat-avatar" style="background: ${avatarColor};">
+                        ${avatar}
+                        ${onlineStatus}
                     </div>
+                    <div class="chat-info">
+                        <div class="chat-info-header">
+                            <span class="chat-name">${chat.name} ${chat.type === 'private' ? '🔐' : chat.type === 'group' ? '👥' : ''}</span>
+                            <span class="chat-time">${chat.lastMessageTime || ''}</span>
+                        </div>
+                        <div class="chat-last-message">
+                            <span class="chat-message-text">${chat.lastMessage || 'Нет сообщений'}</span>
+                            ${unreadCount > 0 ? `<span class="chat-badge">${unreadCount}</span>` : ''}
+                        </div>
+                    </div>
+                    <button class="chat-menu-btn" onclick="openChatMenu('${chat.id}', event)">⋯</button>
                 `;
+                
+                chatEl.onclick = function(e) {
+                    if (e.target.classList.contains('chat-menu-btn')) return;
+                    document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    selectChat(chat);
+                };
+                
+                chatsListEl.appendChild(chatEl);
             });
-            
-            chatsListEl.innerHTML = html;
         }
-
+        
         function displayFriends() {
             if (!currentUser) return;
             
+            console.log(`👥 Отображаю друзей пользователя ${currentUser.username}`);
             const userFriends = userData[currentUser.id]?.friends || [];
-            const incomingRequests = userData[currentUser.id]?.friendRequests?.filter(r => r.direction === 'incoming') || [];
+            const incomingRequests = userData[currentUser.id]?.friendRequests.filter(r => r.direction === 'incoming') || [];
             const friendsListEl = document.getElementById('friendsList');
+            
+            if (!friendsListEl) return;
             
             let html = '';
             
@@ -1821,10 +2376,10 @@
                 
                 incomingRequests.forEach(request => {
                     html += `
-                        <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                        <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
                             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
                                 <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #ffa500, #ff8c00); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">
-                                    ${request.avatar || '😀'}
+                                    ${userData[request.id]?.profile?.avatar || '😀'}
                                 </div>
                                 <div>
                                     <h4 style="font-size: 16px; color: #333; margin-bottom: 5px;">${request.username}</h4>
@@ -1842,7 +2397,9 @@
                                     font-size: 14px;
                                     font-weight: 600;
                                     cursor: pointer;
-                                ">✅ Добавить в друзья</button>
+                                ">
+                                    ✅ Добавить в друзья
+                                </button>
                                 <button onclick="ignoreFriendRequest('${request.username}')" style="
                                     flex: 1;
                                     padding: 10px;
@@ -1853,7 +2410,9 @@
                                     font-size: 14px;
                                     font-weight: 600;
                                     cursor: pointer;
-                                ">❌ Игнорировать</button>
+                                ">
+                                    ❌ Игнорировать
+                                </button>
                             </div>
                         </div>
                     `;
@@ -1865,16 +2424,19 @@
                 
                 userFriends.forEach(friend => {
                     const isOnline = isUserOnline(friend.id);
+                    const statusDot = isOnline ? 
+                        '<span style="display: inline-block; width: 10px; height: 10px; background: #4caf50; border-radius: 50%; margin-left: 8px;"></span>' : 
+                        '<span style="display: inline-block; width: 10px; height: 10px; background: #9e9e9e; border-radius: 50%; margin-left: 8px;"></span>';
                     
                     html += `
                         <div class="chat-item" onclick="selectFriendChat('${friend.username}')" style="margin-bottom: 8px;">
                             <div class="chat-avatar" style="background: linear-gradient(135deg, #27ae60, #2ecc71); position: relative;">
-                                ${friend.avatar || '😀'}
+                                ${userData[friend.id]?.profile?.avatar || '😀'}
                                 ${isOnline ? '<span class="online-dot"></span>' : '<span class="offline-dot"></span>'}
                             </div>
                             <div class="chat-info">
                                 <div class="chat-info-header">
-                                    <span class="chat-name">${friend.username}</span>
+                                    <span class="chat-name">${friend.username} ${statusDot}</span>
                                     <span class="chat-time">${isOnline ? 'online' : 'offline'}</span>
                                 </div>
                                 <div class="chat-last-message">
@@ -1898,74 +2460,143 @@
             
             friendsListEl.innerHTML = html;
         }
-
+        
         function selectFriendChat(username) {
             const friendUser = usersDatabase.find(u => u.username === username);
             if (!friendUser) return;
             
-            createPrivateChat(friendUser.id);
-        }
-
-        async function createPrivateChat(userId) {
-            const data = await apiRequest('/chats', 'POST', {
-                user1_id: currentUser.id,
-                user2_id: userId
-            });
+            const chatId = 'chat_' + [currentUser.id, friendUser.id].sort().join('_');
+            let chat = userData[currentUser.id].chats.find(c => c.id === chatId);
             
-            if (data.chat) {
-                await loadChats();
-                selectChat(data.chat.id);
-                showAllChats();
+            if (!chat) {
+                chat = {
+                    id: chatId,
+                    name: friendUser.username,
+                    userId: friendUser.id,
+                    type: 'private',
+                    lastMessage: 'Начните общение',
+                    lastMessageTime: '',
+                    unread: 0,
+                    isDeleted: false
+                };
+                userData[currentUser.id].chats.push(chat);
+                saveToStorage();
             }
+            
+            selectChat(chat);
+            showAllChats();
         }
-
+        
         function showAllChats() {
-            document.getElementById('chatsTabBtn').classList.add('active');
-            document.getElementById('friendsTabBtn').classList.remove('active');
+            console.log('💬 Показываю чаты');
+            
+            const chatsBtn = document.getElementById('chatsTabBtn');
+            const friendsBtn = document.getElementById('friendsTabBtn');
+            
+            chatsBtn.classList.add('active');
+            chatsBtn.classList.remove('inactive');
+            friendsBtn.classList.add('inactive');
+            friendsBtn.classList.remove('active');
+            
             document.getElementById('chatsList').style.display = 'block';
             document.getElementById('friendsList').style.display = 'none';
-        }
-
-        function showMyFriends() {
-            document.getElementById('chatsTabBtn').classList.remove('active');
-            document.getElementById('friendsTabBtn').classList.add('active');
-            document.getElementById('chatsList').style.display = 'none';
-            document.getElementById('friendsList').style.display = 'block';
-            displayFriends();
-        }
-
-        async function selectChat(chatId) {
-            const chat = userData[currentUser.id].chats.find(c => c.id === chatId);
-            if (!chat) return;
             
-            currentChat = chat;
-            
-            let chatName = chat.name || 'Чат';
-            if (chat.type === 'private' && chat.participants) {
-                const otherUserId = chat.participants.find(id => id !== currentUser.id);
-                const otherUser = usersDatabase.find(u => u.id === otherUserId);
-                if (otherUser) {
-                    chatName = otherUser.username;
-                }
-            }
-            
-            document.getElementById('currentChatTitle').textContent = chatName;
-            document.getElementById('currentChatAvatar').textContent = chatName.charAt(0);
-            document.getElementById('currentChatParticipants').textContent = chat.type === 'private' ? 'Личный чат' : 'Групповой чат';
-            document.getElementById('messageInput').disabled = false;
-            document.getElementById('sendButton').disabled = false;
-            document.getElementById('messageInput').focus();
-            
-            await loadMessages(chat.id);
             displayChats();
         }
 
+        function showMyFriends() {
+            console.log('👥 Показываю список друзей');
+            
+            const chatsBtn = document.getElementById('chatsTabBtn');
+            const friendsBtn = document.getElementById('friendsTabBtn');
+            
+            friendsBtn.classList.add('active');
+            friendsBtn.classList.remove('inactive');
+            chatsBtn.classList.add('inactive');
+            chatsBtn.classList.remove('active');
+            
+            document.getElementById('chatsList').style.display = 'none';
+            document.getElementById('friendsList').style.display = 'block';
+            
+            displayFriends();
+        }
+        
+        async function selectChat(chat) {
+            console.log(`💭 Выбран чат: ${chat.name}`, chat);
+            currentChat = chat;
+            
+            document.getElementById('currentChatTitle').textContent = chat.name + (chat.type === 'private' ? ' 🔐' : chat.type === 'group' ? ' 👥' : '');
+            
+            if (chat.type === 'group') {
+                const participants = chat.participants || [];
+                const participantNames = participants
+                    .filter(p => p.id !== currentUser.id)
+                    .map(p => p.username)
+                    .join(', ');
+                document.getElementById('currentChatParticipants').innerHTML = `
+                    👥 Участники: ${participantNames}
+                `;
+                document.getElementById('currentChatAvatar').textContent = '👥';
+            } else if (chat.type === 'pending') {
+                document.getElementById('currentChatAvatar').textContent = '⏳';
+                document.getElementById('currentChatParticipants').innerHTML = `
+                    <span style="color: #ffa500;">⏳ Ожидание подтверждения заявки</span>
+                `;
+            } else {
+                const friendAvatar = chat.userId ? (userData[chat.userId]?.profile?.avatar || '😀') : '😀';
+                document.getElementById('currentChatAvatar').textContent = friendAvatar;
+                
+                const isOnline = isUserOnline(chat.userId);
+                document.getElementById('currentChatParticipants').innerHTML = `
+                    ${isOnline ? 
+                        '<span style="color: #4caf50;">● online</span>' : 
+                        '<span style="color: #9e9e9e;">● offline</span>'} 🔐
+                `;
+            }
+            
+            if (chat.type === 'pending') {
+                document.getElementById('messagesContainer').innerHTML = `
+                    <div style="text-align: center; max-width: 400px; margin: auto;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">👋</div>
+                        <h3 style="font-size: 22px; color: #333; margin-bottom: 15px;">
+                            Заявка в друзья отправлена
+                        </h3>
+                        <p style="color: #666; margin-bottom: 30px; font-size: 16px;">
+                            Ожидаем, пока пользователь <strong>${chat.name}</strong> подтвердит заявку
+                        </p>
+                        <button onclick="cancelFriendRequest('${chat.name}')" style="
+                            padding: 12px 25px;
+                            background: #ff6b6b;
+                            color: white;
+                            border: none;
+                            border-radius: 10px;
+                            font-size: 15px;
+                            font-weight: 600;
+                            cursor: pointer;
+                        ">
+                            ❌ Отменить заявку
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('messageInput').disabled = true;
+                document.getElementById('sendButton').disabled = true;
+            } else {
+                document.getElementById('messageInput').disabled = false;
+                document.getElementById('sendButton').disabled = false;
+                document.getElementById('messageInput').focus();
+                
+                markMessagesAsRead(chat.id);
+                await loadMessages();
+                displayChats();
+            }
+        }
+        
         // ===== ФУНКЦИИ СООБЩЕНИЙ =====
         function markMessagesAsRead(chatId) {
-            if (!currentUser || !chatId || !userData[currentUser.id]?.messages) return;
+            if (!currentUser || !chatId) return;
             
             const messages = userData[currentUser.id].messages[chatId] || [];
-            if (!userData[currentUser.id].readMessages) userData[currentUser.id].readMessages = {};
             if (!userData[currentUser.id].readMessages[chatId]) {
                 userData[currentUser.id].readMessages[chatId] = {};
             }
@@ -1976,103 +2607,330 @@
                     msg.status = 'read';
                 }
             });
-        }
-
-        async function loadMessages() {
-            if (!currentChat || !currentUser) return;
             
-            const chatId = currentChat.id;
-            const data = await apiRequest(`/messages/${chatId}`);
-            
-            if (data.messages) {
-                if (!userData[currentUser.id].messages) userData[currentUser.id].messages = {};
-                userData[currentUser.id].messages[chatId] = data.messages;
-                displayMessages();
+            if (currentChat?.type === 'group') {
+                const participants = currentChat.participants || [];
+                participants.forEach(participant => {
+                    if (participant.id !== currentUser.id && userData[participant.id]?.messages[chatId]) {
+                        const participantMessages = userData[participant.id].messages[chatId];
+                        participantMessages.forEach(msg => {
+                            if (msg.senderId === currentUser.id) {
+                                msg.status = 'read';
+                            }
+                        });
+                    }
+                });
+            } else {
+                const friendId = currentChat?.userId;
+                if (friendId && userData[friendId]?.messages[chatId]) {
+                    const friendMessages = userData[friendId].messages[chatId];
+                    friendMessages.forEach(msg => {
+                        if (msg.senderId === currentUser.id) {
+                            msg.status = 'read';
+                        }
+                    });
+                }
             }
+            
+            saveToStorage();
         }
-
-        function displayMessages() {
+        
+        async function loadMessages() {
             if (!currentChat || !currentUser) return;
             
             const messagesContainer = document.getElementById('messagesContainer');
             const chatId = currentChat.id;
-            const messages = userData[currentUser.id]?.messages?.[chatId] || [];
+            
+            if (!userData[currentUser.id].messages) {
+                userData[currentUser.id].messages = {};
+            }
+            if (!userData[currentUser.id].messages[chatId]) {
+                userData[currentUser.id].messages[chatId] = [];
+            }
+            if (!userData[currentUser.id].readMessages[chatId]) {
+                userData[currentUser.id].readMessages[chatId] = {};
+            }
+            
+            const messages = userData[currentUser.id].messages[chatId];
             
             if (messages.length === 0) {
                 messagesContainer.innerHTML = `
                     <div class="empty-chat">
                         <div class="icon">💬</div>
-                        <h3>${document.getElementById('currentChatTitle').textContent}</h3>
+                        <h3>${currentChat.name} ${currentChat.type === 'private' ? '🔐' : ''}</h3>
                         <p>Нет сообщений. Напишите первым!</p>
                     </div>
                 `;
                 return;
             }
             
-            let html = '';
-            messages.forEach(msg => {
-                const isOutgoing = msg.user_id === currentUser.id;
-                const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
+            messagesContainer.innerHTML = '';
+            
+            for (const msg of messages) {
+let displayText = msg.text;
+let isEncrypted = false;
+
+if (msg.senderId === currentUser.id) {
+    displayText = msg.text;
+    isEncrypted = true;
+} 
+else if (currentChat.type === 'private' && 
+         !msg.text.startsWith('✅') && 
+         !msg.text.startsWith('👥') && 
+         !msg.text.startsWith('⏳') && 
+         currentUserPrivateKey) {
+    try {
+        const textToDecrypt = msg.encryptedText || msg.text;
+        displayText = await decryptMessage(textToDecrypt, currentUserPrivateKey);
+        isEncrypted = true;
+    } catch (e) {
+        displayText = '[🔒 Зашифрованное сообщение]';
+    }
+}
                 
-                html += `
-                    <div class="message ${isOutgoing ? 'outgoing' : 'incoming'}">
-                        ${!isOutgoing ? `<div class="message-sender">${msg.sender_name}</div>` : ''}
-                        <div class="message-text">${msg.text}</div>
-                        <div class="message-time">${time}</div>
+                const messageEl = document.createElement('div');
+                messageEl.className = `message ${msg.senderId === currentUser.id ? 'outgoing' : 'incoming'}`;
+                
+                let statusIcon = '';
+                if (msg.senderId === currentUser.id) {
+                    if (msg.status === 'read') {
+                        statusIcon = '<span class="status-icon read" style="color: #4fc3f7;">✓✓</span>';
+                    } else {
+                        statusIcon = '<span class="status-icon delivered">✓</span>';
+                    }
+                }
+                
+                let senderName = '';
+                if (currentChat.type === 'group' && msg.senderId !== currentUser.id) {
+                    const sender = usersDatabase.find(u => u.id === msg.senderId);
+                    if (sender) {
+                        senderName = `<div class="message-sender">@${sender.username}</div>`;
+                    }
+                }
+                
+                messageEl.innerHTML = `
+                    ${senderName}
+                    <div class="message-text">${displayText}</div>
+                    <div class="message-footer">
+                        <span class="message-time">${msg.time}</span>
+                        ${isEncrypted ? '<span style="margin-right: 4px;">🔐</span>' : ''}
+                        ${msg.senderId === currentUser.id ? '<span style="margin-right: 4px;">🔐</span>' : ''}
+                        ${statusIcon}
                     </div>
                 `;
-            });
+                
+                messagesContainer.appendChild(messageEl);
+            }
             
-            messagesContainer.innerHTML = html;
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-
+        
         async function sendMessage() {
             if (!currentChat || !currentUser) return;
+            if (currentChat.type === 'pending') {
+                alert('Сначала дождитесь подтверждения заявки');
+                return;
+            }
             
             const messageInput = document.getElementById('messageInput');
             const text = messageInput.value.trim();
+            
             if (!text) return;
             
-            messageInput.value = '';
+            const chatId = currentChat.id;
+            const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
             
-            const data = await apiRequest('/messages', 'POST', {
-                chat_id: currentChat.id,
-                user_id: currentUser.id,
-                text: text
-            });
+            let encryptedText = text;
             
-            if (data.success) {
-                await loadMessages();
-                await loadChats();
+            if (currentChat.type === 'private' && currentChat.userId) {
+                const receiver = usersDatabase.find(u => u.id === currentChat.userId);
+                if (receiver && receiver.publicKey) {
+                    try {
+                        const publicKey = await importPublicKey(receiver.publicKey);
+                        encryptedText = await encryptMessage(text, publicKey);
+                    } catch (e) {
+                        console.error('❌ Ошибка шифрования:', e);
+                    }
+                }
             }
+            
+const message = {
+    id: Date.now(),
+    senderId: currentUser.id,
+    senderName: currentUser.username,
+    text: text,
+    encryptedText: encryptedText,
+    time: time,
+    status: 'delivered'
+};
+            
+            if (!userData[currentUser.id].messages[chatId]) {
+                userData[currentUser.id].messages[chatId] = [];
+            }
+            userData[currentUser.id].messages[chatId].push(message);
+            
+            const userChat = userData[currentUser.id].chats.find(c => c.id === chatId);
+            if (userChat) {
+                userChat.lastMessage = text.length > 30 ? text.substring(0, 30) + '...' : text;
+                userChat.lastMessageTime = time;
+            }
+            
+            if (currentChat.type === 'private' && currentChat.userId) {
+                const friendId = currentChat.userId;
+                if (userData[friendId]) {
+                    if (userData[friendId].deletedChats) {
+                        userData[friendId].deletedChats = userData[friendId].deletedChats.filter(id => id !== chatId);
+                    }
+                    
+                    let friendChat = userData[friendId].chats.find(c => c.id === chatId);
+                    if (!friendChat) {
+                        friendChat = {
+                            id: chatId,
+                            name: currentUser.username,
+                            userId: currentUser.id,
+                            type: 'private',
+                            lastMessage: text.length > 30 ? text.substring(0, 30) + '...' : text,
+                            lastMessageTime: time,
+                            unread: 1,
+                            isDeleted: false
+                        };
+                        userData[friendId].chats.push(friendChat);
+                    }
+                    
+                    if (!userData[friendId].messages[chatId]) {
+                        userData[friendId].messages[chatId] = [];
+                    }
+                    userData[friendId].messages[chatId].push({
+                        ...message,
+                        text: encryptedText,
+                        status: 'delivered'
+                    });
+                    
+                    if (friendChat) {
+                        friendChat.lastMessage = text.length > 30 ? text.substring(0, 30) + '...' : text;
+                        friendChat.lastMessageTime = time;
+                    }
+                }
+            }
+            
+            if (currentChat.type === 'group') {
+                const participants = currentChat.participants || [];
+                participants.forEach(participant => {
+                    if (participant.id !== currentUser.id && userData[participant.id]) {
+                        if (!userData[participant.id].messages[chatId]) {
+                            userData[participant.id].messages[chatId] = [];
+                        }
+                        
+                        userData[participant.id].messages[chatId].push({
+                            ...message,
+                            text: text,
+                            status: 'delivered'
+                        });
+                        
+                        const participantChat = userData[participant.id].chats.find(c => c.id === chatId);
+                        if (participantChat) {
+                            participantChat.lastMessage = text.length > 30 ? text.substring(0, 30) + '...' : text;
+                            participantChat.lastMessageTime = time;
+                        }
+                    }
+                });
+            }
+            
+            messageInput.value = '';
+            saveToStorage();
+            await loadMessages();
+            displayChats();
         }
-
+        
         function handleMessageKeyPress(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 sendMessage();
             }
         }
-
+        
+        // ===== МОБИЛЬНАЯ НАВИГАЦИЯ =====
+        function goBackToChats() {
+            document.getElementById('leftPanel').classList.remove('hidden-for-mobile');
+            document.getElementById('rightPanel').classList.remove('show-for-mobile');
+        }
+        
         // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
         function showChatInfo() {
             if (!currentChat) {
                 alert('Выберите чат');
                 return;
             }
-            alert(`💬 Информация о чате\nID: ${currentChat.id}`);
+            
+            if (currentChat.type === 'group') {
+                const participants = currentChat.participants || [];
+                const names = participants.map(p => p.username).join(', ');
+                alert(`👥 Групповой чат\n\nНазвание: ${currentChat.name}\nУчастники: ${names}\nСоздатель: ${usersDatabase.find(u => u.id === currentChat.createdBy)?.username || 'неизвестно'}`);
+            } else if (currentChat.type === 'private') {
+                const isOnline = isUserOnline(currentChat.userId);
+                const status = isOnline ? '● онлайн' : '● офлайн';
+                alert(`💬 Личный чат\n\nСобеседник: ${currentChat.name}\nСтатус: ${status}\n🔐 Сквозное шифрование (E2EE)\n\nДаже сервер не может прочитать ваши сообщения!`);
+            } else {
+                alert(`⏳ Ожидание подтверждения заявки от ${currentChat.name}`);
+            }
         }
-
+        
         function showChatSettings() {
-            alert('Настройки чата в разработке');
+            alert('Настройки чата (в разработке)');
         }
-
+        
+        // ===== НОВЫЕ СЕРВЕРНЫЕ ФУНКЦИИ ДЛЯ ЗАГРУЗКИ ДАННЫХ =====
+        async function loadUsersFromServer() {
+            const data = await apiRequest('/users');
+            if (data.users) {
+                usersDatabase = data.users;
+            }
+        }
+        
+        async function loadFriendsFromServer() {
+            const data = await apiRequest(`/friends/${currentUser.id}`);
+            if (data.friends) {
+                userData[currentUser.id].friends = data.friends;
+            }
+        }
+        
+        async function loadFriendRequestsFromServer() {
+            const data = await apiRequest(`/friend-requests/${currentUser.id}`);
+            if (data.requests) {
+                userData[currentUser.id].friendRequests = data.requests.map(r => ({
+                    id: r.id,
+                    username: r.username,
+                    direction: 'incoming'
+                }));
+            }
+        }
+        
+        async function loadChatsFromServer() {
+            const data = await apiRequest(`/chats/${currentUser.id}`);
+            if (data.chats) {
+                userData[currentUser.id].chats = data.chats;
+            }
+        }
+        
+        async function loadMessagesFromServer(chatId) {
+            const data = await apiRequest(`/messages/${chatId}`);
+            if (data.messages) {
+                if (!userData[currentUser.id].messages) {
+                    userData[currentUser.id].messages = {};
+                }
+                userData[currentUser.id].messages[chatId] = data.messages;
+            }
+        }
+        
         // ===== ИНИЦИАЛИЗАЦИЯ =====
         window.onload = async function() {
-            console.log('🇷🇺 Российский Национальный Чат загружен');
+            console.log('🌐 Страница загружена');
+            await loadFromStorage();
             showLoginForm();
+            
+            setUserOnline(1);
+            setUserOnline(2);
         };
     </script>
 </body>
-</html>	
+</html>
