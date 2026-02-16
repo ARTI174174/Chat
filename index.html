@@ -1477,51 +1477,53 @@
             setTimeout(() => showLoginForm(), 1000);
         }
 
-        async function login() {
-            console.log('🔄 Вход через сервер...');
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value.trim();
-            
-            if (!username || !password) {
-                showStatus('Заполните все поля', 'error');
-                return;
-            }
-            
-            const data = await apiRequest('/login', 'POST', { username, password });
-            
-            if (data.error) {
-                showStatus(data.error, 'error');
-                return;
-            }
-            
-            console.log('✅ Вход успешен!', data.user);
-            currentUser = data.user;
-            
-            if (user.privateKey) {
-                currentUserPrivateKey = await importPrivateKey(user.privateKey);
-                console.log('✅ Приватный ключ загружен');
-            }
-            
-            if (!userData[currentUser.id]) {
-                userData[currentUser.id] = {
-                    friends: [],
-                    friendRequests: [],
-                    chats: [],
-                    messages: {},
-                    readMessages: {},
-                    profile: { firstName: '', lastName: '', bio: '', avatar: '😀' },
-                    pinnedChats: [],
-                    deletedChats: []
-                };
-                saveToStorage();
-            }
-            
-            setUserOnline(currentUser.id);
-            
-            showMainInterface();
-            loadUserData();
-            showStatus(`Добро пожаловать, ${username}! 🔐`, 'success');
-        }
+   async function login() {
+    console.log('🔄 Вход через сервер...');
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    
+    if (!username || !password) {
+        showStatus('Заполните все поля', 'error');
+        return;
+    }
+    
+    const data = await apiRequest('/login', 'POST', { username, password });
+    
+    if (data.error) {
+        showStatus(data.error, 'error');
+        return;
+    }
+    
+    console.log('✅ Вход успешен!', data.user);
+    currentUser = data.user;
+    
+    // Загружаем ключи шифрования если есть
+    if (currentUser.privateKey) {
+        currentUserPrivateKey = await importPrivateKey(currentUser.privateKey);
+        console.log('✅ Приватный ключ загружен');
+    }
+    
+    if (!userData[currentUser.id]) {
+        userData[currentUser.id] = {
+            friends: [],
+            friendRequests: [],
+            chats: [],
+            messages: {},
+            readMessages: {},
+            profile: { firstName: '', lastName: '', bio: '', avatar: '😀' },
+            pinnedChats: [],
+            deletedChats: []
+        };
+        saveToStorage();
+    }
+    
+    setUserOnline(currentUser.id);
+    
+    // Показываем интерфейс
+    showMainInterface();
+    loadUserData();
+    showStatus(`Добро пожаловать, ${username}! 🔐`, 'success');
+}
 
         // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ АВТОРИЗАЦИИ (оставлены для совместимости) =====
         function showLoginForm() {
