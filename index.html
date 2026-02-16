@@ -1477,6 +1477,9 @@
                     currentUserPrivateKey = await importPrivateKey(data.user.privateKey);
                 }
                 
+                // ЗАГРУЖАЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С СЕРВЕРА
+                await loadAllUsers();
+                
                 if (!userData[currentUser.id]) {
                     userData[currentUser.id] = {
                         friends: [],
@@ -1617,7 +1620,7 @@
         }
         
         // ===== ФУНКЦИИ ДОБАВЛЕНИЯ ДРУЗЕЙ =====
-        function openAddFriend() {
+        async function openAddFriend() {
             console.log('👤 Открываю окно добавления друга');
             
             const friendUsername = prompt('Введите НИК пользователя, которого хотите добавить в друзья:');
@@ -1627,6 +1630,9 @@
                 alert('❌ Нельзя добавить самого себя');
                 return;
             }
+            
+            // ЗАГРУЖАЕМ СВЕЖИЙ СПИСОК ПОЛЬЗОВАТЕЛЕЙ
+            await loadAllUsers();
             
             const friendUser = usersDatabase.find(u => u.username === friendUsername);
             if (!friendUser) {
