@@ -1478,73 +1478,65 @@
         }
 
 async function login() {
-    console.log('1️⃣ Функция login() началась');
-    
+    console.log('🔄 Вход через сервер...');
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     
-    console.log('2️⃣ Получены данные:', { username, password });
-    
     if (!username || !password) {
-        console.log('3️⃣ Ошибка: поля не заполнены');
         showStatus('Заполните все поля', 'error');
         return;
     }
     
-    console.log('4️⃣ Отправляю запрос к серверу...');
+    const data = await apiRequest('/login', 'POST', { username, password });
     
-    try {
-        const data = await apiRequest('/login', 'POST', { username, password });
-        console.log('5️⃣ Ответ от сервера:', data);
-        
-        if (data.error) {
-            console.log('6️⃣ Ошибка от сервера:', data.error);
-            showStatus(data.error, 'error');
-            return;
-        }
-        
-        console.log('7️⃣ Успешный вход, данные пользователя:', data.user);
-        currentUser = data.user;
-        
-        console.log('8️⃣ Загружаю ключи шифрования...');
-        if (currentUser.privateKey) {
-            currentUserPrivateKey = await importPrivateKey(currentUser.privateKey);
-            console.log('9️⃣ Приватный ключ загружен');
-        }
-        
-        console.log('🔟 Инициализирую userData...');
-        if (!userData[currentUser.id]) {
-            userData[currentUser.id] = {
-                friends: [],
-                friendRequests: [],
-                chats: [],
-                messages: {},
-                readMessages: {},
-                profile: { firstName: '', lastName: '', bio: '', avatar: '😀' },
-                pinnedChats: [],
-                deletedChats: []
-            };
-            saveToStorage();
-        }
-        
-        console.log('1️⃣1️⃣ Устанавливаю онлайн статус');
-        setUserOnline(currentUser.id);
-        
-        console.log('1️⃣2️⃣ Показываю главный интерфейс');
-        showMainInterface();
-        
-        console.log('1️⃣3️⃣ Загружаю данные пользователя');
-        loadUserData();
-        
-        console.log('1️⃣4️⃣ Показываю статус успеха');
-        showStatus(`Добро пожаловать, ${username}! 🔐`, 'success');
-        
-        console.log('1️⃣5️⃣ ВСЁ ГОТОВО!');
-        
-    } catch (error) {
-        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА В login():', error);
-        showStatus('Ошибка при входе', 'error');
+    if (data.error) {
+        showStatus(data.error, 'error');
+        return;
     }
+    
+    console.log('✅ Вход успешен!', data.user);
+    currentUser = data.user;
+    
+    // ===== ЗАГРУЗКА ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С СЕРВЕРА =====
+    console.log('📥 Загружаю всех пользователей с сервера...');
+    const usersData = await apiRequest('/users');
+    if (usersData.users) {
+        // Преобразуем в формат, понятный старому коду
+        usersDatabase = usersData.users.map(u => ({
+            id: u.id,
+            username: u.username,
+            // Добавляем заглушки для совместимости со старым кодом
+            publicKey: null,
+            privateKey: null
+        }));
+        console.log(`✅ Загружено ${usersDatabase.length} пользователей`);
+    }
+    
+    // Загружаем ключи шифрования если есть
+    if (data.user.privateKey) {
+        currentUserPrivateKey = await importPrivateKey(data.user.privateKey);
+        console.log('✅ Приватный ключ загружен');
+    }
+    
+    if (!userData[currentUser.id]) {
+        userData[currentUser.id] = {
+            friends: [],
+            friendRequests: [],
+            chats: [],
+            messages: {},
+            readMessages: {},
+            profile: { firstName: '', lastName: '', bio: '', avatar: '😀' },
+            pinnedChats: [],
+            deletedChats: []
+        };
+        saveToStorage();
+    }
+    
+    setUserOnline(currentUser.id);
+    
+    showMainInterface();
+    loadUserData();
+    showStatus(`Добро пожаловать, ${username}! 🔐`, 'success');
 }
 
         // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ АВТОРИЗАЦИИ (оставлены для совместимости) =====
