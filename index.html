@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🇷🇺 Российский Национальный Чат</title>
+    <title>💬 DIDI - Мессенджер (E2EE)</title>
     <style>
         /* ===== СБРОС СТИЛЕЙ ===== */
         * {
@@ -951,81 +951,13 @@
         .hidden {
             display: none !important;
         }
-        
-        /* Мобильная адаптация */
-        @media (max-width: 768px) {
-            body {
-                padding: 0;
-            }
-            
-            .container {
-                height: 100vh;
-                border-radius: 0;
-            }
-            
-            .left-panel {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 2;
-                transform: translateX(0);
-                transition: transform 0.3s ease;
-                min-width: 100%;
-                max-width: 100%;
-            }
-            
-            .left-panel.hidden-for-mobile {
-                transform: translateX(-100%);
-            }
-            
-            .right-panel {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 3;
-                transform: translateX(100%);
-                transition: transform 0.3s ease;
-            }
-            
-            .right-panel.show-for-mobile {
-                transform: translateX(0);
-            }
-            
-            .back-button {
-                display: flex;
-            }
-            
-            .chat-header {
-                padding: 15px 20px;
-            }
-            
-            .messages-container {
-                padding: 20px;
-            }
-            
-            .message-input-container {
-                padding: 15px 20px;
-            }
-            
-            .message-input-wrapper {
-                gap: 10px;
-            }
-            
-            .send-btn {
-                padding: 15px 25px;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- ЭКРАН ВХОДА / РЕГИСТРАЦИИ -->
         <div class="auth-screen" id="authScreen">
-            <div class="logo">🇷🇺 РОССИЙСКИЙ НАЦИОНАЛЬНЫЙ ЧАТ</div>
+            <div class="logo">💬 DIDI 🔐</div>
             
             <div class="auth-form">
                 <div class="auth-tabs">
@@ -1037,15 +969,15 @@
                 <div id="loginForm">
                     <div class="form-group">
                         <label for="loginUsername">Имя пользователя</label>
-                        <input type="text" id="loginUsername" class="form-input" placeholder="Введите ник" value="test_user">
+                        <input type="text" id="loginUsername" class="form-input" placeholder="Введите ник" value="">
                     </div>
                     
                     <div class="form-group">
                         <label for="loginPassword">Пароль</label>
-                        <input type="password" id="loginPassword" class="form-input" placeholder="Введите пароль" value="12345">
+                        <input type="password" id="loginPassword" class="form-input" placeholder="Введите пароль" value="">
                     </div>
                     
-                    <button class="btn" onclick="login()">Войти</button>
+                    <button class="btn" onclick="login()">Войти в DIDI</button>
                 </div>
                 
                 <!-- ФОРМА РЕГИСТРАЦИИ -->
@@ -1070,7 +1002,7 @@
         <!-- ОСНОВНОЙ ИНТЕРФЕЙС МЕССЕНДЖЕРА -->
         <div class="main-screen" id="mainScreen">
             <!-- ЛЕВАЯ ПАНЕЛЬ -->
-            <div class="left-panel" id="leftPanel">
+            <div class="left-panel">
                 <!-- ПРОФИЛЬ -->
                 <div class="profile-header">
                     <div class="profile-row">
@@ -1120,10 +1052,9 @@
             </div>
             
             <!-- ПРАВАЯ ПАНЕЛЬ -->
-            <div class="right-panel" id="rightPanel">
+            <div class="right-panel">
                 <!-- ХЕДЕР ЧАТА -->
                 <div class="chat-header">
-                    <button class="back-button" id="backButton" onclick="goBackToChats()">←</button>
                     <div class="chat-header-info">
                         <div class="chat-header-avatar" id="currentChatAvatar">💬</div>
                         <div class="chat-header-text">
@@ -1138,13 +1069,7 @@
                 </div>
                 
                 <!-- ОКНО СООБЩЕНИЙ -->
-                <div class="messages-container" id="messagesContainer">
-                    <div class="empty-chat">
-                        <div class="icon">💬</div>
-                        <h3>Начните общение</h3>
-                        <p>Выберите чат или друга</p>
-                    </div>
-                </div>
+                <div class="messages-container" id="messagesContainer"></div>
                 
                 <!-- ФОРМА ОТПРАВКИ СООБЩЕНИЙ -->
                 <div class="message-input-container">
@@ -1255,29 +1180,21 @@
     <div id="chatMenuModal" class="chat-menu-modal" style="display: none;"></div>
 
     <script>
-        // ===== ОТЛАДКА =====
-        console.log('🇷🇺 Российский Национальный Чат загружен');
+        // ===== НАСТРОЙКИ СЕРВЕРА =====
+        const API_URL = window.location.origin;
         
-        // ===== НАСТРОЙКИ СЕРВЕРА (НОВЫЕ) =====
-        const SERVER_URL = window.location.origin;
-        let currentUser = null;
-        let currentChat = null;
-        let currentChatMenuTarget = null;
-        let onlineUsers = new Set();
+        // ===== БАЗА ДАННЫХ ПОЛЬЗОВАТЕЛЕЙ =====
         let usersDatabase = [];
         let userData = {};
-        let currentUserPrivateKey = null;
 
         // ===== ДОСТУПНЫЕ АВАТАРЫ =====
         const AVATAR_EMOJIS = ['😀', '😎', '🥳', '😺', '🐶', '🐱', '🐼', '🦊', '🐸', '🐨', 
                                '🦁', '🐮', '🐷', '🐙', '🦄', '🐧', '🐦', '🐤', '🐌', '🐞'];
 
         // ===== ONLINE СТАТУСЫ =====
-        function setUserOnline(userId) { onlineUsers.add(userId); }
-        function setUserOffline(userId) { onlineUsers.delete(userId); }
-        function isUserOnline(userId) { return onlineUsers.has(userId); }
+        let onlineUsers = new Set();
 
-        // ===== КРИПТОГРАФИЧЕСКИЕ ФУНКЦИИ (ОРИГИНАЛЬНЫЕ) =====
+        // ===== КРИПТОГРАФИЧЕСКИЕ ФУНКЦИИ =====
         async function generateKeyPair() {
             const keyPair = await window.crypto.subtle.generateKey(
                 {
@@ -1357,7 +1274,9 @@
             }
         }
 
-        // ===== ЗАГРУЗКА ДАННЫХ ИЗ localStorage (ОРИГИНАЛЬНЫЕ) =====
+        let currentUserPrivateKey = null;
+
+        // ===== ЗАГРУЗКА ДАННЫХ ИЗ localStorage =====
         async function loadFromStorage() {
             console.log('💾 Загружаю данные из localStorage...');
             
@@ -1366,6 +1285,7 @@
                 usersDatabase = JSON.parse(savedUsers);
                 console.log(`✅ Загружено ${usersDatabase.length} пользователей`);
                 
+                // Добавляем ключи шифрования для старых пользователей
                 let needsUpdate = false;
                 for (let user of usersDatabase) {
                     if (!user.publicKey) {
@@ -1377,6 +1297,7 @@
                 }
                 if (needsUpdate) saveToStorage();
             } else {
+                // Создаём тестовых пользователей с ключами шифрования
                 const adminKeys = await generateKeyPair();
                 const adminPublicKey = await exportPublicKey(adminKeys.publicKey);
                 const adminPrivateKey = await exportPrivateKey(adminKeys.privateKey);
@@ -1435,111 +1356,32 @@
             }
         }
 
+        // ===== СОХРАНЕНИЕ ДАННЫХ В localStorage =====
         function saveToStorage() {
             console.log('💾 Сохраняю данные в localStorage...');
             localStorage.setItem('didi_users_e2ee_final', JSON.stringify(usersDatabase));
             localStorage.setItem('didi_userdata_e2ee_final', JSON.stringify(userData));
         }
 
-        // ===== НОВЫЕ СЕРВЕРНЫЕ ФУНКЦИИ =====
-        async function apiRequest(url, method = 'GET', body = null) {
-            try {
-                const options = { method, headers: { 'Content-Type': 'application/json' } };
-                if (body) options.body = JSON.stringify(body);
-                const res = await fetch(SERVER_URL + url, options);
-                return await res.json();
-            } catch (e) {
-                console.error('Ошибка API:', e);
-                return { error: 'Сервер не отвечает' };
-            }
+        // ===== ONLINE СТАТУСЫ =====
+        function setUserOnline(userId) {
+            onlineUsers.add(userId);
         }
 
-        async function register() {
-            console.log('🔄 Регистрация через сервер...');
-            const username = document.getElementById('registerUsername').value.trim();
-            const password = document.getElementById('registerPassword').value.trim();
-            
-            if (!username || !password) {
-                showStatus('Заполните все поля', 'error');
-                return;
-            }
-            
-            const data = await apiRequest('/register', 'POST', { username, password });
-            
-            if (data.error) {
-                showStatus(data.error, 'error');
-                return;
-            }
-            
-            showStatus('Аккаунт создан! Входите', 'success');
-            document.getElementById('loginUsername').value = username;
-            document.getElementById('loginPassword').value = password;
-            setTimeout(() => showLoginForm(), 1000);
+        function setUserOffline(userId) {
+            onlineUsers.delete(userId);
         }
 
-async function login() {
-    console.log('🔄 Вход через сервер...');
-    const username = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value.trim();
-    
-    if (!username || !password) {
-        showStatus('Заполните все поля', 'error');
-        return;
-    }
-    
-    const data = await apiRequest('/login', 'POST', { username, password });
-    
-    if (data.error) {
-        showStatus(data.error, 'error');
-        return;
-    }
-    
-    console.log('✅ Вход успешен!', data.user);
-    currentUser = data.user;
-    
-    // ===== ЗАГРУЗКА ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С СЕРВЕРА =====
-    console.log('📥 Загружаю всех пользователей с сервера...');
-    const usersData = await apiRequest('/users');
-    if (usersData.users) {
-        // Преобразуем в формат, понятный старому коду
-        usersDatabase = usersData.users.map(u => ({
-            id: u.id,
-            username: u.username,
-            // Добавляем заглушки для совместимости со старым кодом
-            publicKey: null,
-            privateKey: null
-        }));
-        console.log(`✅ Загружено ${usersDatabase.length} пользователей`);
-    }
-    
-    // Загружаем ключи шифрования если есть
-    if (data.user.privateKey) {
-        currentUserPrivateKey = await importPrivateKey(data.user.privateKey);
-        console.log('✅ Приватный ключ загружен');
-    }
-    
-    if (!userData[currentUser.id]) {
-        userData[currentUser.id] = {
-            friends: [],
-            friendRequests: [],
-            chats: [],
-            messages: {},
-            readMessages: {},
-            profile: { firstName: '', lastName: '', bio: '', avatar: '😀' },
-            pinnedChats: [],
-            deletedChats: []
-        };
-        saveToStorage();
-    }
-    
-    setUserOnline(currentUser.id);
-    
-    showMainInterface();
-    loadUserData();
-    showStatus(`Добро пожаловать, ${username}! 🔐`, 'success');
-}
+        function isUserOnline(userId) {
+            return onlineUsers.has(userId);
+        }
 
-        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ АВТОРИЗАЦИИ (оставлены для совместимости) =====
+        // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+        let currentUser = null;
+        let currentChat = null;
+        let currentChatMenuTarget = null;
+        
+        // ===== ФУНКЦИИ АВТОРИЗАЦИИ =====
         function showLoginForm() {
             console.log('📝 Показываю форму входа');
             document.getElementById('loginForm').classList.remove('hidden');
@@ -1569,6 +1411,97 @@ async function login() {
             }
         }
         
+         async function register() {
+            console.log('🔄 Регистрация...');
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value.trim();
+            
+            if (!username || !password) {
+                showStatus('Заполните все поля', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    showStatus(data.error, 'error');
+                    return;
+                }
+                
+                showStatus('Аккаунт создан! Входите', 'success');
+                document.getElementById('loginUsername').value = username;
+                document.getElementById('loginPassword').value = password;
+                setTimeout(() => showLoginForm(), 1000);
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showStatus('Ошибка соединения с сервером', 'error');
+            }
+        }
+        
+        async function login() {
+            console.log('🔄 Вход в систему...');
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            
+            if (!username || !password) {
+                showStatus('Заполните все поля', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    showStatus(data.error, 'error');
+                    return;
+                }
+                
+                console.log('✅ Вход успешен!', data.user);
+                currentUser = data.user;
+                
+                // Загружаем приватный ключ если есть
+                if (data.user.privateKey) {
+                    currentUserPrivateKey = await importPrivateKey(data.user.privateKey);
+                }
+                
+                if (!userData[currentUser.id]) {
+                    userData[currentUser.id] = {
+                        friends: [],
+                        friendRequests: [],
+                        chats: [],
+                        messages: {},
+                        readMessages: {},
+                        profile: { firstName: '', lastName: '', bio: '', avatar: '😀' },
+                        pinnedChats: [],
+                        deletedChats: []
+                    };
+                    saveToStorage();
+                }
+                
+                setUserOnline(currentUser.id);
+                
+                showMainInterface();
+                loadUserData();
+                showStatus(`Добро пожаловать, ${username}! 🔐`, 'success');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showStatus('Ошибка соединения с сервером', 'error');
+            }
+        }
+        
         function logout() {
             console.log('🚪 Выход из системы');
             
@@ -1589,6 +1522,7 @@ async function login() {
             showLoginForm();
         }
         
+        // ===== ГЛАВНЫЙ ИНТЕРФЕЙС =====
         function showMainInterface() {
             console.log('🖥️ Показываю главный интерфейс');
             
@@ -1599,7 +1533,7 @@ async function login() {
             mainScreen.classList.add('active');
         }
         
-        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ПРОФИЛЯ =====
+        // ===== ФУНКЦИИ ПРОФИЛЯ =====
         function loadUserData() {
             console.log('👤 Загружаю данные пользователя');
             if (!currentUser) return;
@@ -1682,7 +1616,7 @@ async function login() {
             document.getElementById('profileSettingsModal').classList.remove('active');
         }
         
-        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ДОБАВЛЕНИЯ ДРУЗЕЙ =====
+        // ===== ФУНКЦИИ ДОБАВЛЕНИЯ ДРУЗЕЙ =====
         function openAddFriend() {
             console.log('👤 Открываю окно добавления друга');
             
@@ -1899,7 +1833,7 @@ async function login() {
             alert(`❌ Заявка от ${username} отклонена`);
         }
         
-        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ГРУППОВЫХ ЧАТОВ =====
+        // ===== ФУНКЦИИ ГРУППОВЫХ ЧАТОВ =====
         function openCreateGroupChat() {
             console.log('👥 Открываю окно создания группового чата');
             
@@ -2018,7 +1952,7 @@ async function login() {
             alert(`✅ Групповой чат "${groupName}" создан!`);
         }
         
-        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ДОБАВЛЕНИЯ УЧАСТНИКОВ В ГРУППУ =====
+        // ===== ФУНКЦИИ ДОБАВЛЕНИЯ УЧАСТНИКОВ В ГРУППУ =====
         function openAddGroupMemberModal(chat) {
             console.log('👥 Открываю окно добавления участников в группу', chat);
             
@@ -2138,7 +2072,8 @@ async function login() {
             displayChats();
             alert(`✅ Участники добавлены в группу`);
         }
-		        // ===== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ЧАТОВ =====
+        
+        // ===== ФУНКЦИИ ЧАТОВ =====
         function openChatMenu(chatId, event) {
             event.stopPropagation();
             console.log('📌 Открываю меню чата', chatId);
@@ -2686,16 +2621,19 @@ async function login() {
 let displayText = msg.text;
 let isEncrypted = false;
 
+// СВОИ СООБЩЕНИЯ - показываем оригинал
 if (msg.senderId === currentUser.id) {
-    displayText = msg.text;
-    isEncrypted = true;
+    displayText = msg.text;  // ← СВОЁ СООБЩЕНИЕ ВИДИМ СРАЗУ
+    isEncrypted = true;      // ← Показываем иконку 🔐
 } 
+// ЧУЖИЕ СООБЩЕНИЯ - расшифровываем
 else if (currentChat.type === 'private' && 
          !msg.text.startsWith('✅') && 
          !msg.text.startsWith('👥') && 
          !msg.text.startsWith('⏳') && 
          currentUserPrivateKey) {
     try {
+        // Используем encryptedText если есть, иначе msg.text
         const textToDecrypt = msg.encryptedText || msg.text;
         displayText = await decryptMessage(textToDecrypt, currentUserPrivateKey);
         isEncrypted = true;
@@ -2774,8 +2712,8 @@ const message = {
     id: Date.now(),
     senderId: currentUser.id,
     senderName: currentUser.username,
-    text: text,
-    encryptedText: encryptedText,
+    text: text,                    // ← СОХРАНЯЕМ ОРИГИНАЛЬНЫЙ ТЕКСТ ДЛЯ СЕБЯ
+    encryptedText: encryptedText,  // ← А ШИФРОВАННЫЙ ДЛЯ ДРУГА
     time: time,
     status: 'delivered'
 };
@@ -2865,12 +2803,6 @@ const message = {
             }
         }
         
-        // ===== МОБИЛЬНАЯ НАВИГАЦИЯ =====
-        function goBackToChats() {
-            document.getElementById('leftPanel').classList.remove('hidden-for-mobile');
-            document.getElementById('rightPanel').classList.remove('show-for-mobile');
-        }
-        
         // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
         function showChatInfo() {
             if (!currentChat) {
@@ -2895,49 +2827,6 @@ const message = {
             alert('Настройки чата (в разработке)');
         }
         
-        // ===== НОВЫЕ СЕРВЕРНЫЕ ФУНКЦИИ ДЛЯ ЗАГРУЗКИ ДАННЫХ =====
-        async function loadUsersFromServer() {
-            const data = await apiRequest('/users');
-            if (data.users) {
-                usersDatabase = data.users;
-            }
-        }
-        
-        async function loadFriendsFromServer() {
-            const data = await apiRequest(`/friends/${currentUser.id}`);
-            if (data.friends) {
-                userData[currentUser.id].friends = data.friends;
-            }
-        }
-        
-        async function loadFriendRequestsFromServer() {
-            const data = await apiRequest(`/friend-requests/${currentUser.id}`);
-            if (data.requests) {
-                userData[currentUser.id].friendRequests = data.requests.map(r => ({
-                    id: r.id,
-                    username: r.username,
-                    direction: 'incoming'
-                }));
-            }
-        }
-        
-        async function loadChatsFromServer() {
-            const data = await apiRequest(`/chats/${currentUser.id}`);
-            if (data.chats) {
-                userData[currentUser.id].chats = data.chats;
-            }
-        }
-        
-        async function loadMessagesFromServer(chatId) {
-            const data = await apiRequest(`/messages/${chatId}`);
-            if (data.messages) {
-                if (!userData[currentUser.id].messages) {
-                    userData[currentUser.id].messages = {};
-                }
-                userData[currentUser.id].messages[chatId] = data.messages;
-            }
-        }
-        
         // ===== ИНИЦИАЛИЗАЦИЯ =====
         window.onload = async function() {
             console.log('🌐 Страница загружена');
@@ -2947,6 +2836,18 @@ const message = {
             setUserOnline(1);
             setUserOnline(2);
         };
+		        // ===== ФУНКЦИЯ ДЛЯ ЗАГРУЗКИ ПОЛЬЗОВАТЕЛЕЙ =====
+        async function loadAllUsers() {
+            try {
+                const response = await fetch(API_URL + '/users');
+                const data = await response.json();
+                if (data.users) {
+                    usersDatabase = data.users;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки пользователей:', error);
+            }
+        }
     </script>
 </body>
 </html>
