@@ -793,30 +793,32 @@
         <div class="main-screen" id="mainScreen" style="display: none;">
             <!-- Левая панель -->
             <div class="left-panel" id="leftPanel">
-                <div class="profile-header" onclick="openProfileModal()">
-                    <div class="profile-info">
+                <div class="profile-header" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div class="profile-info" onclick="openProfileModal()" style="flex: 1; cursor: pointer;">
                         <div class="profile-avatar" id="profileAvatar">😊</div>
                         <div class="profile-details">
                             <h3 id="profileName">Загрузка...</h3>
                             <p id="profileStatus">онлайн</p>
                         </div>
                     </div>
+                    <button class="chat-action-btn" onclick="logout()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 12px; margin-right: 10px;" title="Выйти">🚪 Выйти</button>
                 </div>
-                
+				
                 <div class="search-box">
                     <input type="text" placeholder="Поиск чатов или пользователей..." id="searchInput" oninput="searchChats()">
                 </div>
                 
-                <div class="chats-list" id="chatsList">
-                    <!-- Чаты будут загружаться сюда -->
-                </div>
-                
-                <div style="padding: 15px; border-top: 1px solid #f0f0f0;">
+                <!-- Кнопки действий ПЕРЕНЕСЕНЫ ВЫШЕ -->
+                <div style="padding: 10px 15px; border-bottom: 1px solid #f0f0f0;">
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                         <button class="btn btn-secondary" style="flex: 1;" onclick="openAddFriendModal()">➕ Добавить</button>
                         <button class="btn btn-secondary" style="flex: 1;" onclick="openFriendsModal()">👥 Друзья</button>
                     </div>
                     <button class="btn" style="width: 100%;" onclick="openCreateGroupModal()">👥 Создать группу</button>
+                </div>
+                
+                <div class="chats-list" id="chatsList">
+                    <!-- Чаты будут загружаться сюда -->
                 </div>
             
             <!-- Правая панель -->
@@ -886,6 +888,28 @@
             </div>
         </div>
         
+		        <!-- Модальное окно добавления в друзья -->
+        <div class="modal" id="addFriendModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>➕ Добавить в друзья</h2>
+                    <span class="close-modal" onclick="closeModal('addFriendModal')">&times;</span>
+                </div>
+                
+                <div class="form-group">
+                    <label>Никнейм пользователя</label>
+                    <input type="text" id="friendUsername" placeholder="Введите никнейм">
+                </div>
+                
+                <button class="btn" onclick="sendFriendRequest()">Отправить заявку</button>
+                
+                <h3 style="margin: 20px 0 10px;">Все пользователи</h3>
+                <div class="users-list" id="allUsersList" style="max-height: 300px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;">
+                    <!-- Пользователи будут загружаться сюда -->
+                </div>
+            </div>
+        </div>
+		
         <!-- Модальное окно мои друзья -->
         <div class="modal" id="friendsModal">
             <div class="modal-content">
@@ -1571,7 +1595,6 @@
         // Открыть модальное окно добавления в друзья
         function openAddFriendModal() {
             updateAllUsersList();
-            updateFriendRequestsList();
             document.getElementById('addFriendModal').classList.add('active');
         }
 		        // Открыть модальное окно друзей
@@ -1727,35 +1750,6 @@
             });
         }
         
-        // Обновление списка заявок
-        function updateFriendRequestsList() {
-            const list = document.getElementById('friendRequestsList');
-            list.innerHTML = '';
-            
-            if (friendRequests.length === 0) {
-                list.innerHTML = '<p style="color: #999; text-align: center;">Нет входящих заявок</p>';
-                return;
-            }
-            
-            friendRequests.forEach(request => {
-                const user = request.fromUserId;
-                const div = document.createElement('div');
-                div.className = 'user-item';
-                
-                div.innerHTML = `
-                    <div class="user-avatar">${user.avatar || '😊'}</div>
-                    <div class="user-info">
-                        <div class="user-name">${user.firstName || ''} ${user.lastName || ''} (${user.username})</div>
-                    </div>
-                    <div>
-                        <button class="btn" style="width: auto; padding: 8px 15px;" onclick="acceptFriendRequest('${request._id}')">✓</button>
-                        <button class="btn btn-secondary" style="width: auto; padding: 8px 15px; margin-left: 5px;" onclick="rejectFriendRequest('${request._id}')">✗</button>
-                    </div>
-                `;
-                
-                list.appendChild(div);
-            });
-        }
         
         // Отправка заявки в друзья
         async function sendFriendRequest() {
