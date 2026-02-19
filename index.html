@@ -1177,24 +1177,36 @@
         // Загрузка заявок в друзья
         async function loadFriendRequests() {
             try {
-                const response = await fetch(`${API_URL}/friend-requests/${currentUser._id}`);
-                const data = await response.json();
-                console.log('Загружены заявки (сырые данные):', data); // ПОСМОТРИМ ЧТО ПРИХОДИТ
+                console.log('🔍 Загружаем заявки для пользователя:', currentUser._id);
                 
-                // Преобразуем данные, если нужно
-                friendRequests = data;
+                const response = await fetch(`${API_URL}/friend-requests/${currentUser._id}`);
+                console.log('📡 Статус ответа:', response.status);
+                
+                const data = await response.json();
+                console.log('📦 Данные с сервера (сырые):', data);
+                
+                // Проверяем, что пришло
+                if (Array.isArray(data)) {
+                    console.log('✅ Это массив, длина:', data.length);
+                    friendRequests = data;
+                } else {
+                    console.log('❌ Это не массив:', data);
+                    friendRequests = [];
+                }
                 
                 // Обновляем отображение
                 updateFriendsRequestsList();
                 
                 // Показываем бейдж если есть заявки
                 if (friendRequests.length > 0) {
+                    console.log('🔴 Есть заявки, показываем бейдж');
                     updateFriendsButtonBadge(friendRequests.length);
                 } else {
+                    console.log('⚪ Нет заявок, убираем бейдж');
                     updateFriendsButtonBadge(0);
                 }
             } catch (err) {
-                console.error('Ошибка загрузки заявок:', err);
+                console.error('❌ Ошибка загрузки заявок:', err);
             }
         }
         // Загрузка друзей
@@ -1615,34 +1627,47 @@
         // Обновление списка входящих заявок в окне друзей
         function updateFriendsRequestsList() {
             const list = document.getElementById('friendsRequestsList');
-            if (!list) return;
+            if (!list) {
+                console.log('❌ Элемент friendsRequestsList не найден');
+                return;
+            }
+            
+            console.log('🔄 Обновление списка заявок');
+            console.log('📋 Текущие friendRequests:', friendRequests);
+            
             list.innerHTML = '';
             
-            console.log('Обновление списка заявок, friendRequests =', friendRequests);
-            
             if (!friendRequests || friendRequests.length === 0) {
+                console.log('📭 Заявок нет');
                 list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Нет входящих заявок</p>';
                 return;
             }
             
-            friendRequests.forEach(request => {
-                console.log('Обработка заявки:', request);
+            console.log(`📨 Найдено заявок: ${friendRequests.length}`);
+            
+            friendRequests.forEach((request, index) => {
+                console.log(`📄 Заявка #${index}:`, request);
                 
-                // Проверяем разные варианты структуры данных
+                // Проверяем структуру заявки
                 let user = null;
                 
                 if (request.fromUserId && typeof request.fromUserId === 'object') {
-                    // Если fromUserId уже содержит объект пользователя
                     user = request.fromUserId;
+                    console.log(`👤 Найден пользователь в fromUserId:`, user);
                 } else if (request.fromUser) {
-                    // Если есть поле fromUser
                     user = request.fromUser;
+                    console.log(`👤 Найден пользователь в fromUser:`, user);
                 } else {
-                    console.error('Неизвестная структура заявки:', request);
+                    console.log(`❌ Не могу найти пользователя в заявке`, request);
                     return;
                 }
                 
-                if (!user) return;
+                if (!user || !user.username) {
+                    console.log(`❌ Некорректные данные пользователя`, user);
+                    return;
+                }
+                
+                console.log(`✅ Создаем элемент для пользователя ${user.username}`);
                 
                 const div = document.createElement('div');
                 div.className = 'user-item';
@@ -1651,21 +1676,26 @@
                 div.style.display = 'flex';
                 div.style.alignItems = 'center';
                 div.style.justifyContent = 'space-between';
+                div.style.border = '1px solid #f0f0f0';
+                div.style.borderRadius = '10px';
                 
                 div.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <div class="user-avatar" style="width: 40px; height: 40px; font-size: 20px; min-width: 40px;">${user.avatar || '😊'}</div>
+                        <div class="user-avatar" style="width: 40px; height: 40px; font-size: 20px; min-width: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                            ${user.avatar || '😊'}
+                        </div>
                         <div class="user-info">
-                            <div class="user-name">${user.firstName || ''} ${user.lastName || ''} (${user.username || '?'})</div>
+                            <div class="user-name" style="font-weight: 600;">${user.firstName || ''} ${user.lastName || ''} (${user.username})</div>
                         </div>
                     </div>
                     <div style="display: flex; gap: 5px;">
-                        <button class="btn" style="width: auto; padding: 5px 10px; font-size: 12px;" onclick="acceptFriendRequest('${request._id}')">✓ Принять</button>
-                        <button class="btn btn-secondary" style="width: auto; padding: 5px 10px; font-size: 12px;" onclick="rejectFriendRequest('${request._id}')">✗</button>
+                        <button class="btn" style="width: auto; padding: 5px 10px; font-size: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;" onclick="acceptFriendRequest('${request._id}')">✓ Принять</button>
+                        <button class="btn btn-secondary" style="width: auto; padding: 5px 10px; font-size: 12px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;" onclick="rejectFriendRequest('${request._id}')">✗ Отклонить</button>
                     </div>
                 `;
                 
                 list.appendChild(div);
+                console.log(`✅ Элемент добавлен в список`);
             });
         }
         
