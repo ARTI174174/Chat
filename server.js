@@ -1,98 +1,148 @@
+// ============================================
+// 🇷🇺 Российский Национальный Чат - Сервер
+// ============================================
+
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
-const { MongoClient, ObjectId } = require('mongodb');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ziganurov174_db_user:OABwcyu32hni3Tum@cluster0.y30awkl.mongodb.net/didi_messenger?retryWrites=true&w=majority';
 
-app.use(cors());
-app.use(express.json());
+// Middleware
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ===== ПОДКЛЮЧЕНИЕ К MONGODB =====
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ziganurov174_db_user:OABwcyu32hni3Tum@cluster0.y30awkl.mongodb.net/?retryWrites=true&w=majority';
-const client = new MongoClient(MONGODB_URI);
-let db;
+// ============================================
+// Подключение к MongoDB
+// ============================================
+mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log('✅ Подключено к MongoDB Atlas');
+}).catch(err => {
+    console.error('❌ Ошибка подключения к MongoDB:', err);
+    process.exit(1);
+});
 
-async function connectDB() {
-    try {
-        await client.connect();
-        db = client.db('didi_messenger');
-        console.log('✅ Подключено к MongoDB Atlas');
-        
-        // Создаём коллекции, если их нет
-        await db.createCollection('users');
-        await db.createCollection('chats');
-        await db.createCollection('messages');
-        await db.createCollection('friend_requests');
-        await db.createCollection('friends');
-        console.log('✅ Коллекции готовы');
-    } catch (err) {
-        console.error('❌ Ошибка подключения к MongoDB:', err);
-    }
-}
-connectDB();
+// ============================================
+// Схемы MongoDB
+// ============================================
 
-// ===== API ЭНДПОИНТЫ =====
+// Схема пользователя
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    publicKey: { type: String, required: true },
+    privateKey: { type: String, required: true },
+    avatar: { type: String, default: '😊' },
+    firstName: { type: String, default: '' },
+    lastName: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    lastSeen: { type: Date, default: Date.now },
+    isOnline: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Схема заявок в друзья
+const friendRequestSchema = new mongoose.Schema({
+    fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Схема друзей
+const friendSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    friendId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Схема чатов
+const chatSchema = new mongoose.Schema({
+    name: { type: String, default: '' },
+    type: { type: String, enum: ['private', 'group'], required: true },
+    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    lastMessage: { type: String, default: '' },
+    lastMessageTime: { type: Date, default: Date.now },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Схема сообщений
+const messageSchema = new mongoose.Schema({
+    chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true },
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    senderName: { type: String, required: true },
+    text: { type: String, default: '' },
+    encryptedText: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Схема закрепленных чатов
+const pinnedChatSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true }
+});
+
+// Создание моделей
+const User = mongoose.model('User', userSchema);
+const FriendRequest = mongoose.model('FriendRequest', friendRequestSchema);
+const Friend = mongoose.model('Friend', friendSchema);
+const Chat = mongoose.model('Chat', chatSchema);
+const Message = mongoose.model('Message', messageSchema);
+const PinnedChat = mongoose.model('PinnedChat', pinnedChatSchema);
+
+// ============================================
+// API Эндпоинты
+// ============================================
+
+// ------------------------------
+// Авторизация
+// ------------------------------
 
 // Регистрация
 app.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Нужно указать имя пользователя и пароль' });
-    }
-    
     try {
-        const users = db.collection('users');
-        const existingUser = await users.findOne({ username });
+        const { username, password, publicKey, privateKey, avatar, firstName, lastName, bio } = req.body;
         
+        // Проверка существования пользователя
+        const existingUser = await User.findOne({ username });
         if (existingUser) {
-            return res.status(400).json({ error: 'Пользователь уже существует' });
+            return res.status(400).json({ error: 'Пользователь с таким ником уже существует' });
         }
         
-        const result = await users.insertOne({
+        // Хеширование пароля
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Создание пользователя
+        const user = new User({
             username,
-            password, // В реальном проекте нужно хэшировать!
-            createdAt: new Date(),
-            avatar: '😀',
-            firstName: '',
-            lastName: '',
-            bio: ''
+            password: hashedPassword,
+            publicKey,
+            privateKey,
+            avatar: avatar || '😊',
+            firstName: firstName || '',
+            lastName: lastName || '',
+            bio: bio || ''
         });
         
-        res.status(201).json({
-            message: 'Пользователь создан',
-            user: {
-                id: result.insertedId,
-                username
-            }
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка базы данных' });
-    }
-});
-
-// Вход
-app.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Нужно указать имя пользователя и пароль' });
-    }
-    
-    try {
-        const users = db.collection('users');
-        const user = await users.findOne({ username, password });
-        
-        if (!user) {
-            return res.status(401).json({ error: 'Неверный логин или пароль' });
-        }
+        await user.save();
         
         res.json({
             success: true,
-            message: 'Вход выполнен',
             user: {
-                id: user._id,
+                _id: user._id,
                 username: user.username,
                 avatar: user.avatar,
                 firstName: user.firstName,
@@ -101,365 +151,431 @@ app.post('/login', async (req, res) => {
             }
         });
     } catch (err) {
-        res.status(500).json({ error: 'Ошибка базы данных' });
+        console.error('Ошибка регистрации:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// Получить всех пользователей (кроме текущего)
-app.get('/users/:currentUserId', async (req, res) => {
-    const currentUserId = req.params.currentUserId;
-    
+// Вход
+app.post('/login', async (req, res) => {
     try {
-        const users = db.collection('users');
-        const allUsers = await users.find({
-            _id: { $ne: new ObjectId(currentUserId) }
-        }).toArray();
+        const { username, password } = req.body;
         
-        res.json({ 
-            users: allUsers.map(u => ({ 
-                id: u._id, 
-                username: u.username,
-                avatar: u.avatar,
-                firstName: u.firstName,
-                lastName: u.lastName,
-                bio: u.bio
-            })) 
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка получения пользователей' });
-    }
-});
-
-// Обновить профиль пользователя
-app.post('/user/update', async (req, res) => {
-    const { userId, firstName, lastName, bio, avatar } = req.body;
-    
-    try {
-        const users = db.collection('users');
-        await users.updateOne(
-            { _id: new ObjectId(userId) },
-            { $set: { firstName, lastName, bio, avatar } }
-        );
-        
-        res.json({ success: true, message: 'Профиль обновлён' });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка обновления профиля' });
-    }
-});
-
-// Отправить заявку в друзья
-app.post('/friend-request', async (req, res) => {
-    const { fromUserId, toUserId } = req.body;
-    
-    try {
-        const friendRequests = db.collection('friend_requests');
-        
-        // Проверяем, нет ли уже заявки
-        const existing = await friendRequests.findOne({
-            $or: [
-                { fromUserId, toUserId, status: 'pending' },
-                { fromUserId: toUserId, toUserId: fromUserId, status: 'pending' }
-            ]
-        });
-        
-        if (existing) {
-            return res.status(400).json({ error: 'Заявка уже существует' });
+        // Поиск пользователя
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(401).json({ error: 'Неверный логин или пароль' });
         }
         
-        await friendRequests.insertOne({
-            fromUserId,
-            toUserId,
-            status: 'pending',
-            createdAt: new Date()
-        });
-        
-        res.json({ success: true, message: 'Заявка отправлена' });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка отправки заявки' });
-    }
-});
-
-// Принять заявку в друзья
-app.post('/accept-friend', async (req, res) => {
-    const { fromUserId, toUserId } = req.body;
-    
-    try {
-        const friendRequests = db.collection('friend_requests');
-        const friends = db.collection('friends');
-        
-        // Обновляем статус заявки
-        await friendRequests.updateOne(
-            { fromUserId, toUserId, status: 'pending' },
-            { $set: { status: 'accepted' } }
-        );
-        
-        // Добавляем в друзья обоим пользователям
-        await friends.insertOne({
-            userId: fromUserId,
-            friendId: toUserId,
-            createdAt: new Date()
-        });
-        
-        await friends.insertOne({
-            userId: toUserId,
-            friendId: fromUserId,
-            createdAt: new Date()
-        });
-        
-        res.json({ success: true, message: 'Заявка принята' });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка принятия заявки' });
-    }
-});
-
-// Получить список друзей пользователя
-app.get('/friends/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    
-    try {
-        const friends = db.collection('friends');
-        const users = db.collection('users');
-        
-        const friendRelations = await friends.find({
-            userId: userId
-        }).toArray();
-        
-        const friendIds = friendRelations.map(f => f.friendId);
-        
-        const friendList = await users.find({
-            _id: { $in: friendIds.map(id => new ObjectId(id)) }
-        }).toArray();
-        
-        res.json({
-            friends: friendList.map(f => ({
-                id: f._id,
-                username: f.username,
-                avatar: f.avatar
-            }))
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка получения друзей' });
-    }
-});
-
-// Получить входящие заявки в друзья
-app.get('/friend-requests/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    
-    try {
-        const friendRequests = db.collection('friend_requests');
-        const users = db.collection('users');
-        
-        const requests = await friendRequests.find({
-            toUserId: userId,
-            status: 'pending'
-        }).toArray();
-        
-        const fromUserIds = requests.map(r => r.fromUserId);
-        
-        const fromUsers = await users.find({
-            _id: { $in: fromUserIds.map(id => new ObjectId(id)) }
-        }).toArray();
-        
-        res.json({
-            requests: fromUsers.map(u => ({
-                id: u._id,
-                username: u.username,
-                avatar: u.avatar
-            }))
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка получения заявок' });
-    }
-});
-
-// Создание личного чата
-app.post('/chats', async (req, res) => {
-    const { user1_id, user2_id } = req.body;
-    
-    try {
-        const chats = db.collection('chats');
-        
-        const existingChat = await chats.findOne({
-            type: 'private',
-            participants: { $all: [user1_id, user2_id] }
-        });
-        
-        if (existingChat) {
-            return res.json({
-                success: true,
-                message: 'Чат уже существует',
-                chat: existingChat
-            });
+        // Проверка пароля
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Неверный логин или пароль' });
         }
         
-        const newChat = {
-            name: 'Личный чат',
-            type: 'private',
-            participants: [user1_id, user2_id],
-            lastMessage: '',
-            lastMessageTime: '',
-            createdAt: new Date()
-        };
+        // Обновление статуса онлайн
+        user.isOnline = true;
+        user.lastSeen = new Date();
+        await user.save();
         
-        const result = await chats.insertOne(newChat);
-        
-        res.status(201).json({
+        res.json({
             success: true,
-            message: 'Чат создан',
-            chat: {
-                id: result.insertedId,
-                ...newChat
+            user: {
+                _id: user._id,
+                username: user.username,
+                avatar: user.avatar,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                bio: user.bio,
+                privateKey: user.privateKey,
+                publicKey: user.publicKey
             }
         });
     } catch (err) {
-        res.status(500).json({ error: 'Ошибка базы данных' });
+        console.error('Ошибка входа:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// ------------------------------
+// Пользователи
+// ------------------------------
+
+// Получение всех пользователей кроме текущего
+app.get('/users/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const users = await User.find({ _id: { $ne: userId } })
+            .select('_id username avatar firstName lastName bio isOnline lastSeen publicKey');
+        
+        res.json(users);
+    } catch (err) {
+        console.error('Ошибка получения пользователей:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// ------------------------------
+// Друзья
+// ------------------------------
+
+// Отправка заявки в друзья
+app.post('/friend-request', async (req, res) => {
+    try {
+        const { fromUserId, toUsername } = req.body;
+        
+        // Поиск пользователя по нику
+        const toUser = await User.findOne({ username: toUsername });
+        if (!toUser) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        // Проверка существующей заявки
+        const existingRequest = await FriendRequest.findOne({
+            $or: [
+                { fromUserId, toUserId: toUser._id },
+                { fromUserId: toUser._id, toUserId: fromUserId }
+            ]
+        });
+        
+        if (existingRequest) {
+            return res.status(400).json({ error: 'Заявка уже существует' });
+        }
+        
+        // Проверка, не друзья ли уже
+        const existingFriend = await Friend.findOne({
+            $or: [
+                { userId: fromUserId, friendId: toUser._id },
+                { userId: toUser._id, friendId: fromUserId }
+            ]
+        });
+        
+        if (existingFriend) {
+            return res.status(400).json({ error: 'Вы уже друзья' });
+        }
+        
+        // Создание заявки
+        const request = new FriendRequest({
+            fromUserId,
+            toUserId: toUser._id
+        });
+        
+        await request.save();
+        
+        res.json({ success: true, requestId: request._id });
+    } catch (err) {
+        console.error('Ошибка отправки заявки:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Принятие заявки в друзья
+app.post('/accept-friend', async (req, res) => {
+    try {
+        const { requestId, userId } = req.body;
+        
+        const request = await FriendRequest.findById(requestId);
+        if (!request) {
+            return res.status(404).json({ error: 'Заявка не найдена' });
+        }
+        
+        // Обновление статуса заявки
+        request.status = 'accepted';
+        await request.save();
+        
+        // Создание записи о дружбе в обе стороны
+        const friend1 = new Friend({
+            userId: request.fromUserId,
+            friendId: request.toUserId
+        });
+        
+        const friend2 = new Friend({
+            userId: request.toUserId,
+            friendId: request.fromUserId
+        });
+        
+        await friend1.save();
+        await friend2.save();
+        
+        // Создание личного чата
+        const existingChat = await Chat.findOne({
+            type: 'private',
+            participants: { $all: [request.fromUserId, request.toUserId] }
+        });
+        
+        if (!existingChat) {
+            const chat = new Chat({
+                type: 'private',
+                participants: [request.fromUserId, request.toUserId]
+            });
+            await chat.save();
+        }
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка принятия заявки:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Отклонение заявки
+app.post('/reject-friend', async (req, res) => {
+    try {
+        const { requestId } = req.body;
+        
+        await FriendRequest.findByIdAndDelete(requestId);
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка отклонения заявки:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Получение списка друзей
+app.get('/friends/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const friends = await Friend.find({ userId })
+            .populate('friendId', '_id username avatar firstName lastName isOnline lastSeen');
+        
+        res.json(friends.map(f => f.friendId));
+    } catch (err) {
+        console.error('Ошибка получения друзей:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Получение входящих заявок
+app.get('/friend-requests/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const requests = await FriendRequest.find({ toUserId: userId, status: 'pending' })
+            .populate('fromUserId', '_id username avatar firstName lastName');
+        
+        res.json(requests);
+    } catch (err) {
+        console.error('Ошибка получения заявок:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// ------------------------------
+// Чаты
+// ------------------------------
+
+// Создание чата
+app.post('/chats', async (req, res) => {
+    try {
+        const { type, name, participants, createdBy } = req.body;
+        
+        // Для личных чатов проверяем существование
+        if (type === 'private') {
+            const existingChat = await Chat.findOne({
+                type: 'private',
+                participants: { $all: participants, $size: 2 }
+            });
+            
+            if (existingChat) {
+                return res.json({ success: true, chat: existingChat });
+            }
+        }
+        
+        const chat = new Chat({
+            type,
+            name: name || '',
+            participants,
+            createdBy
+        });
+        
+        await chat.save();
+        
+        res.json({ success: true, chat });
+    } catch (err) {
+        console.error('Ошибка создания чата:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 // Получение чатов пользователя
-app.get('/chats/:user_id', async (req, res) => {
-    const userId = req.params.user_id;
-    
+app.get('/chats/:userId', async (req, res) => {
     try {
-        const chats = db.collection('chats');
-        const userChats = await chats.find({
-            participants: userId
-        }).sort({ lastMessageTime: -1 }).toArray();
+        const { userId } = req.params;
         
-        res.json({
-            success: true,
-            chats: userChats
-        });
+        const chats = await Chat.find({ participants: userId })
+            .populate('participants', '_id username avatar firstName lastName isOnline lastSeen')
+            .sort({ lastMessageTime: -1 });
+        
+        // Получаем закрепленные чаты
+        const pinnedChats = await PinnedChat.find({ userId }).distinct('chatId');
+        
+        const chatsWithInfo = await Promise.all(chats.map(async (chat) => {
+            const lastMessage = await Message.findOne({ chatId: chat._id })
+                .sort({ createdAt: -1 });
+            
+            return {
+                ...chat.toObject(),
+                isPinned: pinnedChats.includes(chat._id.toString()),
+                lastMessage: lastMessage ? {
+                    text: lastMessage.text,
+                    senderName: lastMessage.senderName,
+                    createdAt: lastMessage.createdAt
+                } : null
+            };
+        }));
+        
+        res.json(chatsWithInfo);
     } catch (err) {
-        res.status(500).json({ error: 'Ошибка базы данных' });
+        console.error('Ошибка получения чатов:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
+// Закрепление чата
+app.post('/chats/pin', async (req, res) => {
+    try {
+        const { userId, chatId } = req.body;
+        
+        const pinned = new PinnedChat({ userId, chatId });
+        await pinned.save();
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка закрепления чата:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Открепление чата
+app.post('/chats/unpin', async (req, res) => {
+    try {
+        const { userId, chatId } = req.body;
+        
+        await PinnedChat.findOneAndDelete({ userId, chatId });
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка открепления чата:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Удаление чата
+app.delete('/chats/:chatId', async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        
+        await Chat.findByIdAndDelete(chatId);
+        await Message.deleteMany({ chatId });
+        await PinnedChat.deleteMany({ chatId });
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка удаления чата:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// ------------------------------
+// Сообщения
+// ------------------------------
+
 // Отправка сообщения
 app.post('/messages', async (req, res) => {
-    const { chat_id, user_id, text } = req.body;
-    
     try {
-        const messages = db.collection('messages');
+        const { chatId, senderId, senderName, text, encryptedText } = req.body;
         
-        // Получаем имя отправителя
-        const users = db.collection('users');
-        const sender = await users.findOne({ _id: new ObjectId(user_id) });
-        
-        const newMessage = {
-            chat_id,
-            user_id,
-            sender_name: sender ? sender.username : 'Unknown',
+        const message = new Message({
+            chatId,
+            senderId,
+            senderName,
             text,
-            createdAt: new Date()
-        };
-        
-        const result = await messages.insertOne(newMessage);
-        
-        // Обновляем последнее сообщение в чате
-        const chats = db.collection('chats');
-        await chats.updateOne(
-            { _id: new ObjectId(chat_id) },
-            { 
-                $set: { 
-                    lastMessage: text.substring(0, 30) + (text.length > 30 ? '...' : ''),
-                    lastMessageTime: new Date().toISOString()
-                } 
-            }
-        );
-        
-        res.status(201).json({
-            success: true,
-            message: 'Сообщение отправлено',
-            message_data: {
-                id: result.insertedId,
-                ...newMessage
-            }
+            encryptedText
         });
+        
+        await message.save();
+        
+        // Обновление последнего сообщения в чате
+        await Chat.findByIdAndUpdate(chatId, {
+            lastMessage: text,
+            lastMessageTime: new Date()
+        });
+        
+        res.json({ success: true, message });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Ошибка отправки' });
+        console.error('Ошибка отправки сообщения:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
 // Получение сообщений из чата
-app.get('/messages/:chat_id', async (req, res) => {
-    const chatId = req.params.chat_id;
-    
+app.get('/messages/:chatId', async (req, res) => {
     try {
-        const messages = db.collection('messages');
-        const chatMessages = await messages.find({
-            chat_id: chatId
-        }).sort({ createdAt: 1 }).toArray();
+        const { chatId } = req.params;
         
-        res.json({
-            success: true,
-            messages: chatMessages
+        const messages = await Message.find({ chatId })
+            .populate('senderId', '_id username avatar firstName lastName')
+            .sort({ createdAt: 1 });
+        
+        res.json(messages);
+    } catch (err) {
+        console.error('Ошибка получения сообщений:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// ------------------------------
+// Профиль
+// ------------------------------
+
+// Обновление профиля
+app.post('/user/update', async (req, res) => {
+    try {
+        const { userId, firstName, lastName, bio, avatar } = req.body;
+        
+        const updateData = {};
+        if (firstName !== undefined) updateData.firstName = firstName;
+        if (lastName !== undefined) updateData.lastName = lastName;
+        if (bio !== undefined) updateData.bio = bio;
+        if (avatar !== undefined) updateData.avatar = avatar;
+        
+        await User.findByIdAndUpdate(userId, updateData);
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка обновления профиля:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Обновление статуса онлайн
+app.post('/user/status', async (req, res) => {
+    try {
+        const { userId, isOnline } = req.body;
+        
+        await User.findByIdAndUpdate(userId, {
+            isOnline,
+            lastSeen: new Date()
         });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка получения сообщений' });
-    }
-});
-
-// Закрепить чат
-app.post('/chats/pin', async (req, res) => {
-    const { userId, chatId } = req.body;
-    
-    try {
-        const users = db.collection('users');
-        await users.updateOne(
-            { _id: new ObjectId(userId) },
-            { $addToSet: { pinnedChats: chatId } }
-        );
         
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: 'Ошибка закрепления чата' });
+        console.error('Ошибка обновления статуса:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
 
-// Открепить чат
-app.post('/chats/unpin', async (req, res) => {
-    const { userId, chatId } = req.body;
-    
-    try {
-        const users = db.collection('users');
-        await users.updateOne(
-            { _id: new ObjectId(userId) },
-            { $pull: { pinnedChats: chatId } }
-        );
-        
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка открепления чата' });
-    }
-});
-
-// Удалить чат
-app.delete('/chats/:chatId', async (req, res) => {
-    const chatId = req.params.chatId;
-    
-    try {
-        const chats = db.collection('chats');
-        await chats.deleteOne({ _id: new ObjectId(chatId) });
-        
-        // Также удаляем все сообщения в этом чате
-        const messages = db.collection('messages');
-        await messages.deleteMany({ chat_id: chatId });
-        
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Ошибка удаления чата' });
-    }
-});
-
-// Отдаём фронтенд
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
+// ------------------------------
+// Здоровье сервера
+// ------------------------------
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date() });
 });
 
 // Запуск сервера
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
     console.log(`✅ Сервер запущен на порту ${PORT}`);
 });
