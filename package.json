@@ -1,19 +1,15 @@
 {
-  "name": "didi-messenger",
+  "name": "russian-chat",
   "version": "1.0.0",
-  "description": "DIDI мессенджер с E2EE шифрованием",
+  "description": "Российский Национальный Чат с E2EE шифрованием",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "build": "npm install"
+    "start": "node server.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "mongodb": "^7.1.0",
-    "sqlite3": "^5.1.6"
-  },
-  "engines": {
-    "node": "18.x"
+    "mongoose": "^7.5.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5"
   }
 }
