@@ -641,7 +641,7 @@
             margin-left: 10px;
         }
 
-        /* Адаптивность для мобильных устройств */
+        /* ========== АДАПТИВНОСТЬ КАК В TELEGRAM ========== */
         @media (max-width: 768px) {
             body {
                 padding: 0;
@@ -650,7 +650,6 @@
             #app {
                 height: 100vh;
                 border-radius: 0;
-                position: relative;
                 overflow: hidden;
             }
 
@@ -658,8 +657,10 @@
                 position: relative;
                 width: 100%;
                 height: 100%;
+                overflow: hidden;
             }
 
+            /* Левая панель (список чатов) - видна по умолчанию */
             .left-panel {
                 position: absolute;
                 left: 0;
@@ -677,27 +678,28 @@
                 transform: translateX(-100%);
             }
 
+            /* Правая панель (окно чата) - скрыта по умолчанию */
             .right-panel {
                 position: absolute;
                 left: 0;
                 top: 0;
                 bottom: 0;
                 width: 100%;
-                z-index: 5;
+                z-index: 20;
                 background: white;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
                 display: flex;
                 flex-direction: column;
+            }
+
+            .right-panel.active {
                 transform: translateX(0);
-                transition: transform 0.3s ease;
             }
 
-            .right-panel.hidden {
-                transform: translateX(100%);
-            }
-
-            /* Кнопка "Назад" в чате */
+            /* Кнопка "Назад" - всегда видна в правой панели */
             .mobile-back-btn {
-                display: block !important;
+                display: flex !important;
                 background: none;
                 border: none;
                 font-size: 28px;
@@ -707,7 +709,6 @@
                 width: 40px;
                 height: 40px;
                 border-radius: 50%;
-                display: flex;
                 align-items: center;
                 justify-content: center;
             }
@@ -716,37 +717,52 @@
                 background: rgba(0,0,0,0.05);
             }
 
-            /* Заголовок чата на мобильных */
+            /* Заголовок чата */
             .chat-header {
-                padding: 15px;
+                padding: 12px 15px;
+                background: white;
+                border-bottom: 1px solid #f0f0f0;
             }
 
             .chat-header-info {
                 flex: 1;
             }
 
-            /* Сообщения на мобильных */
+            /* Сообщения */
+            .messages-container {
+                padding: 15px;
+            }
+
             .message {
                 max-width: 85%;
             }
 
-            /* Поле ввода на мобильных */
+            /* Поле ввода */
             .message-input-area {
                 padding: 10px;
+                background: white;
+                border-top: 1px solid #f0f0f0;
             }
 
             .message-input-area textarea {
-                font-size: 16px; /* Чтобы не увеличивало на iPhone */
+                font-size: 16px;
+                padding: 10px 15px;
             }
 
-            /* Модальные окна на мобильных */
+            /* Модальные окна */
             .modal-content {
                 width: 95%;
                 padding: 20px;
                 max-height: 90vh;
             }
+
+            /* Скрываем лишнее */
+            #noChatSelected {
+                display: flex;
+            }
         }
 
+        /* Кнопка назад на десктопе - скрыта */
         .mobile-back-btn {
             display: none;
         }
@@ -1382,10 +1398,12 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             document.getElementById('chatHeader').style.display = 'flex';
             document.getElementById('messageInputArea').style.display = 'flex';
             
-            // На мобильных устройствах показываем правую панель на весь экран
+            // На мобильных устройствах
             if (window.innerWidth <= 768) {
+                // Скрываем левую панель
                 document.getElementById('leftPanel').classList.add('hidden');
-                document.getElementById('rightPanel').classList.remove('hidden');
+                // Показываем правую панель (добавляем класс active)
+                document.getElementById('rightPanel').classList.add('active');
             }
             
             // Обновляем информацию о чате
@@ -1566,8 +1584,10 @@ const API_URL = 'https://chat-jy2v.onrender.com';
         
         // Показать левую панель на мобильных (кнопка "Назад")
         function showLeftPanel() {
+            // Показываем левую панель
             document.getElementById('leftPanel').classList.remove('hidden');
-            document.getElementById('rightPanel').classList.add('hidden');
+            // Скрываем правую панель (убираем класс active)
+            document.getElementById('rightPanel').classList.remove('active');
         }
         
         // Закрепление/открепление чата
