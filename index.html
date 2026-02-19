@@ -812,10 +812,12 @@
                 </div>
                 
                 <div style="padding: 15px; border-top: 1px solid #f0f0f0;">
-                    <button class="btn btn-secondary" onclick="openAddFriendModal()">➕ Добавить в друзья</button>
-                    <button class="btn" style="margin-top: 10px;" onclick="openCreateGroupModal()">👥 Создать группу</button>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button class="btn btn-secondary" style="flex: 1;" onclick="openAddFriendModal()">➕ Добавить</button>
+                        <button class="btn btn-secondary" style="flex: 1;" onclick="openFriendsModal()">👥 Друзья</button>
+                    </div>
+                    <button class="btn" style="width: 100%;" onclick="openCreateGroupModal()">👥 Создать группу</button>
                 </div>
-            </div>
             
             <!-- Правая панель -->
             <div class="right-panel" id="rightPanel">
@@ -884,29 +886,26 @@
             </div>
         </div>
         
-        <!-- Модальное окно добавления в друзья -->
-        <div class="modal" id="addFriendModal">
+        <!-- Модальное окно мои друзья -->
+        <div class="modal" id="friendsModal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>Добавить в друзья</h2>
-                    <span class="close-modal" onclick="closeModal('addFriendModal')">&times;</span>
+                    <h2>👥 Мои друзья</h2>
+                    <span class="close-modal" onclick="closeModal('friendsModal')">&times;</span>
                 </div>
                 
-                <div class="form-group">
-                    <label>Никнейм пользователя</label>
-                    <input type="text" id="friendUsername" placeholder="Введите никнейм">
+                <div style="margin-bottom: 20px;">
+                    <h3>Входящие заявки</h3>
+                    <div class="users-list" id="friendsRequestsList" style="min-height: 100px; max-height: 200px; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;">
+                        <!-- Входящие заявки будут здесь -->
+                    </div>
                 </div>
                 
-                <button class="btn" onclick="sendFriendRequest()">Отправить заявку</button>
-                
-                <h3 style="margin: 20px 0 10px;">Входящие заявки</h3>
-                <div class="users-list" id="friendRequestsList">
-                    <!-- Заявки будут загружаться сюда -->
-                </div>
-                
-                <h3 style="margin: 20px 0 10px;">Все пользователи</h3>
-                <div class="users-list" id="allUsersList">
-                    <!-- Пользователи будут загружаться сюда -->
+                <div>
+                    <h3>Мои друзья</h3>
+                    <div class="users-list" id="myFriendsList" style="max-height: 300px; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;">
+                        <!-- Список друзей будет здесь -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -1170,6 +1169,7 @@
                 const response = await fetch(`${API_URL}/friend-requests/${currentUser._id}`);
                 friendRequests = await response.json();
                 updateFriendRequestsList();
+                updateFriendsRequestsList(); // Добавлено обновление заявок в новом окне
             } catch (err) {
                 console.error('Ошибка загрузки заявок:', err);
             }
@@ -1180,6 +1180,7 @@
             try {
                 const response = await fetch(`${API_URL}/friends/${currentUser._id}`);
                 friends = await response.json();
+                updateMyFriendsList(); // Добавлено обновление списка друзей
             } catch (err) {
                 console.error('Ошибка загрузки друзей:', err);
             }
@@ -1572,6 +1573,128 @@
             updateAllUsersList();
             updateFriendRequestsList();
             document.getElementById('addFriendModal').classList.add('active');
+        }
+		        // Открыть модальное окно друзей
+        function openFriendsModal() {
+            updateFriendsRequestsList();
+            updateMyFriendsList();
+            document.getElementById('friendsModal').classList.add('active');
+        }
+        
+        // Обновление списка входящих заявок в окне друзей
+        function updateFriendsRequestsList() {
+            const list = document.getElementById('friendsRequestsList');
+            if (!list) return;
+            list.innerHTML = '';
+            
+            if (friendRequests.length === 0) {
+                list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Нет входящих заявок</p>';
+                return;
+            }
+            
+            friendRequests.forEach(request => {
+                const user = request.fromUserId;
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.style.padding = '10px';
+                div.style.marginBottom = '5px';
+                
+                div.innerHTML = `
+                    <div class="user-avatar" style="width: 40px; height: 40px; font-size: 20px;">${user.avatar || '😊'}</div>
+                    <div class="user-info">
+                        <div class="user-name">${user.firstName || ''} ${user.lastName || ''} (${user.username})</div>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn" style="width: auto; padding: 5px 10px; font-size: 12px;" onclick="acceptFriendRequest('${request._id}')">✓</button>
+                        <button class="btn btn-secondary" style="width: auto; padding: 5px 10px; font-size: 12px;" onclick="rejectFriendRequest('${request._id}')">✗</button>
+                    </div>
+                `;
+                
+                list.appendChild(div);
+            });
+        }
+        
+        // Обновление списка друзей
+        function updateMyFriendsList() {
+            const list = document.getElementById('myFriendsList');
+            if (!list) return;
+            list.innerHTML = '';
+            
+            if (friends.length === 0) {
+                list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">У вас пока нет друзей</p>';
+                return;
+            }
+            
+            friends.forEach(friend => {
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.style.padding = '10px';
+                div.style.marginBottom = '5px';
+                div.style.cursor = 'pointer';
+                
+                div.innerHTML = `
+                    <div class="user-avatar" style="width: 40px; height: 40px; font-size: 20px; position: relative;">
+                        ${friend.avatar || '😊'}
+                        <span class="online-indicator" style="background: ${friend.isOnline ? '#4CAF50' : '#9e9e9e'}; width: 8px; height: 8px; bottom: 0; right: 0;"></span>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">${friend.firstName || ''} ${friend.lastName || ''} (${friend.username})</div>
+                        <div class="user-status" style="font-size: 11px;">${friend.isOnline ? 'онлайн' : 'офлайн'}</div>
+                    </div>
+                    <button class="chat-action-btn" style="padding: 5px 10px;" onclick="event.stopPropagation(); startPrivateChat('${friend._id}')">💬</button>
+                `;
+                
+                div.onclick = () => startPrivateChat(friend._id);
+                list.appendChild(div);
+            });
+        }
+        
+        // Начать личный чат с другом
+        async function startPrivateChat(friendId) {
+            closeModal('friendsModal');
+            
+            // Находим друга по ID
+            const friend = friends.find(f => f._id === friendId);
+            if (!friend) return;
+            
+            // Ищем существующий чат
+            const existingChat = chats.find(chat => 
+                chat.type === 'private' && 
+                chat.participants.some(p => p._id === friendId)
+            );
+            
+            if (existingChat) {
+                await selectChat(existingChat);
+            } else {
+                // Создаем новый чат
+                try {
+                    const response = await fetch(`${API_URL}/chats`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: 'private',
+                            participants: [currentUser._id, friendId],
+                            createdBy: currentUser._id
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        await loadChats();
+                        const newChat = chats.find(chat => 
+                            chat.type === 'private' && 
+                            chat.participants.some(p => p._id === friendId)
+                        );
+                        if (newChat) {
+                            await selectChat(newChat);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Ошибка создания чата:', err);
+                    showToast('Ошибка создания чата');
+                }
+            }
         }
         
         // Обновление списка всех пользователей
