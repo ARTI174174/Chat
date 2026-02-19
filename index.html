@@ -761,8 +761,8 @@
                     <button class="btn" onclick="login()">Войти</button>
                 </div>
                 
-<!-- Форма регистрации -->
-<div class="auth-form" id="registerForm" style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
+<!-- Форма регистрации (упрощенная) -->
+<div class="auth-form" id="registerForm">
     <div class="form-group">
         <label>👤 Никнейм</label>
         <input type="text" id="regUsername" placeholder="Придумайте никнейм">
@@ -770,18 +770,6 @@
     <div class="form-group">
         <label>🔒 Пароль</label>
         <input type="password" id="regPassword" placeholder="Придумайте пароль">
-    </div>
-    <div class="form-group">
-        <label>📝 Имя</label>
-        <input type="text" id="regFirstName" placeholder="Ваше имя">
-    </div>
-    <div class="form-group">
-        <label>📝 Фамилия</label>
-        <input type="text" id="regLastName" placeholder="Ваша фамилия">
-    </div>
-    <div class="form-group">
-        <label>💬 О себе</label>
-        <textarea id="regBio" placeholder="Расскажите о себе" rows="2"></textarea>
     </div>
     <button class="btn" onclick="register()">Зарегистрироваться</button>
 </div>
@@ -1050,14 +1038,10 @@
             }
         }
         
-        // Регистрация
+        // Регистрация (упрощенная)
         async function register() {
             const username = document.getElementById('regUsername').value.trim();
             const password = document.getElementById('regPassword').value.trim();
-            const firstName = document.getElementById('regFirstName').value.trim();
-            const lastName = document.getElementById('regLastName').value.trim();
-            const bio = document.getElementById('regBio').value.trim();
-            const avatar = '😊'; // всегда стандартный аватар при регистрации
             
             if (!username || !password) {
                 showToast('Заполните никнейм и пароль');
@@ -1078,10 +1062,10 @@
                         password,
                         publicKey,
                         privateKey,
-                        avatar,
-                        firstName,
-                        lastName,
-                        bio
+                        avatar: '😊',
+                        firstName: '',
+                        lastName: '',
+                        bio: ''
                     })
                 });
                 
@@ -1192,8 +1176,7 @@
             try {
                 const response = await fetch(`${API_URL}/friend-requests/${currentUser._id}`);
                 friendRequests = await response.json();
-                updateFriendRequestsList();
-                updateFriendsRequestsList(); // Добавлено обновление заявок в новом окне
+                updateFriendsRequestsList(); // Только одна функция
             } catch (err) {
                 console.error('Ошибка загрузки заявок:', err);
             }
