@@ -21,17 +21,7 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ============================================
-// Отдача статических файлов
-// ============================================
 
-// Раздаем статические файлы из текущей папки
-app.use(express.static(__dirname));
-
-// Для всех остальных запросов отдаем index.html
-app.get('*', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
 
 // ============================================
 // Подключение к MongoDB
@@ -585,6 +575,30 @@ app.post('/user/status', async (req, res) => {
 // ------------------------------
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
+});
+
+// ============================================
+// Отдача статических файлов (В САМОМ КОНЦЕ!)
+// ============================================
+app.use(express.static(__dirname));
+
+// Этот маршрут должен быть ПОСЛЕДНИМ!
+app.get('*', (req, res) => {
+    // Проверяем, не API ли это запрос
+    if (req.url.startsWith('/users/') || 
+        req.url.startsWith('/friend-requests/') || 
+        req.url.startsWith('/friends/') || 
+        req.url.startsWith('/chats/') || 
+        req.url.startsWith('/messages/') ||
+        req.url.startsWith('/register') ||
+        req.url.startsWith('/login') ||
+        req.url.startsWith('/accept-friend') ||
+        req.url.startsWith('/reject-friend') ||
+        req.url.startsWith('/user/') ||
+        req.url.startsWith('/health')) {
+        return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    res.sendFile(__dirname + '/index.html');
 });
 
 // Запуск сервера
