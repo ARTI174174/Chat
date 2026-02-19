@@ -22,6 +22,18 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ============================================
+// Отдача статических файлов
+// ============================================
+
+// Раздаем статические файлы из текущей папки
+app.use(express.static(__dirname));
+
+// Для всех остальных запросов отдаем index.html
+app.get('*', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
+
+// ============================================
 // Подключение к MongoDB
 // ============================================
 mongoose.connect(MONGODB_URI, {
