@@ -641,7 +641,7 @@
             margin-left: 10px;
         }
 
-        /* Адаптивность */
+        /* Адаптивность для мобильных устройств */
         @media (max-width: 768px) {
             body {
                 padding: 0;
@@ -650,6 +650,14 @@
             #app {
                 height: 100vh;
                 border-radius: 0;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .main-screen {
+                position: relative;
+                width: 100%;
+                height: 100%;
             }
 
             .left-panel {
@@ -659,8 +667,10 @@
                 bottom: 0;
                 width: 100%;
                 z-index: 10;
+                background: white;
                 transform: translateX(0);
-                transition: transform 0.3s;
+                transition: transform 0.3s ease;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             }
 
             .left-panel.hidden {
@@ -668,22 +678,77 @@
             }
 
             .right-panel {
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
                 width: 100%;
+                z-index: 5;
+                background: white;
+                display: flex;
+                flex-direction: column;
+                transform: translateX(0);
+                transition: transform 0.3s ease;
             }
 
+            .right-panel.hidden {
+                transform: translateX(100%);
+            }
+
+            /* Кнопка "Назад" в чате */
             .mobile-back-btn {
                 display: block !important;
+                background: none;
+                border: none;
+                font-size: 28px;
+                cursor: pointer;
+                color: #333;
+                margin-right: 15px;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .mobile-back-btn:hover {
+                background: rgba(0,0,0,0.05);
+            }
+
+            /* Заголовок чата на мобильных */
+            .chat-header {
+                padding: 15px;
+            }
+
+            .chat-header-info {
+                flex: 1;
+            }
+
+            /* Сообщения на мобильных */
+            .message {
+                max-width: 85%;
+            }
+
+            /* Поле ввода на мобильных */
+            .message-input-area {
+                padding: 10px;
+            }
+
+            .message-input-area textarea {
+                font-size: 16px; /* Чтобы не увеличивало на iPhone */
+            }
+
+            /* Модальные окна на мобильных */
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+                max-height: 90vh;
             }
         }
 
         .mobile-back-btn {
             display: none;
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #333;
-            margin-right: 15px;
         }
 
         .encrypted-badge {
@@ -1317,9 +1382,10 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             document.getElementById('chatHeader').style.display = 'flex';
             document.getElementById('messageInputArea').style.display = 'flex';
             
-            // На мобильных устройствах скрываем левую панель
+            // На мобильных устройствах показываем правую панель на весь экран
             if (window.innerWidth <= 768) {
                 document.getElementById('leftPanel').classList.add('hidden');
+                document.getElementById('rightPanel').classList.remove('hidden');
             }
             
             // Обновляем информацию о чате
@@ -1498,9 +1564,10 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             });
         }
         
-        // Показать левую панель на мобильных
+        // Показать левую панель на мобильных (кнопка "Назад")
         function showLeftPanel() {
             document.getElementById('leftPanel').classList.remove('hidden');
+            document.getElementById('rightPanel').classList.add('hidden');
         }
         
         // Закрепление/открепление чата
