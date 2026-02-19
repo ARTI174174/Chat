@@ -1125,7 +1125,7 @@
             }
         }
         
-        // Показать основной экран
+  // Показать основной экран
         function showMainScreen() {
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('mainScreen').style.display = 'flex';
@@ -1134,6 +1134,9 @@
             document.getElementById('profileAvatar').textContent = currentUser.avatar || '😊';
             document.getElementById('profileName').textContent = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username;
             document.getElementById('profileStatus').textContent = 'онлайн';
+            
+            // Запускаем проверку заявок  <--- ЭТО НОВАЯ СТРОКА
+            startFriendRequestsCheck();
         }
         
         // Загрузка данных пользователя
@@ -1202,6 +1205,15 @@
             } catch (err) {
                 console.error('Ошибка загрузки чатов:', err);
             }
+        }
+		
+		     // Проверка новых заявок (запускать каждые 5 секунд)
+        function startFriendRequestsCheck() {
+            setInterval(async () => {
+                if (currentUser) {
+                    await loadFriendRequests();
+                }
+            }, 5000);
         }
         
         // Обновление списка чатов
@@ -1585,9 +1597,10 @@
             updateFriendsRequestsList();
             updateMyFriendsList();
             document.getElementById('friendsModal').classList.add('active');
+			updateFriendsButtonBadge(0); // <--- ДОБАВЬТЕ ЭТУ СТРОКУ
         }
         
-        // Обновление списка входящих заявок в окне друзей
+       // Обновление списка входящих заявок в окне друзей
         function updateFriendsRequestsList() {
             const list = document.getElementById('friendsRequestsList');
             if (!list) return;
@@ -1618,6 +1631,22 @@
                 
                 list.appendChild(div);
             });
+        }
+        
+        // ========== ВСТАВЬТЕ ЭТУ НОВУЮ ФУНКЦИЮ СЮДА ==========
+        // Обновление бейджа на кнопке Друзья
+        function updateFriendsButtonBadge(count) {
+            // Ищем кнопку "Друзья" на странице
+            const friendsBtn = document.querySelector('button[onclick="openFriendsModal()"]');
+            if (friendsBtn) {
+                if (count > 0) {
+                    // Если есть заявки - добавляем красный кружок с цифрой
+                    friendsBtn.innerHTML = `👥 Друзья <span style="background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; margin-left: 5px;">${count}</span>`;
+                } else {
+                    // Если заявок нет - просто текст
+                    friendsBtn.innerHTML = '👥 Друзья';
+                }
+            }
         }
         
         // Обновление списка друзей
