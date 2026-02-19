@@ -95,6 +95,25 @@
             display: block;
         }
 
+.auth-form {
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f0f0f0;
+}
+
+.auth-form::-webkit-scrollbar {
+    width: 6px;
+}
+
+.auth-form::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 10px;
+}
+
+.auth-form::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -742,36 +761,30 @@
                     <button class="btn" onclick="login()">Войти</button>
                 </div>
                 
-                <!-- Форма регистрации -->
-                <div class="auth-form" id="registerForm">
-                    <div class="form-group">
-                        <label>Никнейм</label>
-                        <input type="text" id="regUsername" placeholder="Придумайте никнейм">
-                    </div>
-                    <div class="form-group">
-                        <label>Пароль</label>
-                        <input type="password" id="regPassword" placeholder="Придумайте пароль">
-                    </div>
-                    <div class="form-group">
-                        <label>Имя</label>
-                        <input type="text" id="regFirstName" placeholder="Ваше имя">
-                    </div>
-                    <div class="form-group">
-                        <label>Фамилия</label>
-                        <input type="text" id="regLastName" placeholder="Ваша фамилия">
-                    </div>
-                    <div class="form-group">
-                        <label>О себе</label>
-                        <textarea id="regBio" placeholder="Расскажите о себе" rows="3"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Выберите аватар</label>
-                        <div class="avatar-selector" id="avatarSelector"></div>
-                    </div>
-                    <button class="btn" onclick="register()">Зарегистрироваться</button>
-                </div>
-            </div>
-        </div>
+<!-- Форма регистрации -->
+<div class="auth-form" id="registerForm" style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
+    <div class="form-group">
+        <label>👤 Никнейм</label>
+        <input type="text" id="regUsername" placeholder="Придумайте никнейм">
+    </div>
+    <div class="form-group">
+        <label>🔒 Пароль</label>
+        <input type="password" id="regPassword" placeholder="Придумайте пароль">
+    </div>
+    <div class="form-group">
+        <label>📝 Имя</label>
+        <input type="text" id="regFirstName" placeholder="Ваше имя">
+    </div>
+    <div class="form-group">
+        <label>📝 Фамилия</label>
+        <input type="text" id="regLastName" placeholder="Ваша фамилия">
+    </div>
+    <div class="form-group">
+        <label>💬 О себе</label>
+        <textarea id="regBio" placeholder="Расскажите о себе" rows="2"></textarea>
+    </div>
+    <button class="btn" onclick="register()">Зарегистрироваться</button>
+</div>
         
         <!-- Основной экран -->
         <div class="main-screen" id="mainScreen" style="display: none;">
@@ -1018,7 +1031,7 @@
             const firstName = document.getElementById('regFirstName').value.trim();
             const lastName = document.getElementById('regLastName').value.trim();
             const bio = document.getElementById('regBio').value.trim();
-            const avatar = window.selectedAvatar || '😊';
+            const avatar = '😊'; // всегда стандартный аватар при регистрации
             
             if (!username || !password) {
                 showToast('Заполните никнейм и пароль');
