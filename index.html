@@ -95,24 +95,24 @@
             display: block;
         }
 
-.auth-form {
-    scrollbar-width: thin;
-    scrollbar-color: #667eea #f0f0f0;
-}
+        .auth-form {
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #f0f0f0;
+        }
 
-.auth-form::-webkit-scrollbar {
-    width: 6px;
-}
+        .auth-form::-webkit-scrollbar {
+            width: 6px;
+        }
 
-.auth-form::-webkit-scrollbar-track {
-    background: #f0f0f0;
-    border-radius: 10px;
-}
+        .auth-form::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
 
-.auth-form::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 10px;
-}
+        .auth-form::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
 
         .form-group {
             margin-bottom: 20px;
@@ -660,7 +660,6 @@
                 overflow: hidden;
             }
 
-            /* Левая панель (список чатов) - видна по умолчанию */
             .left-panel {
                 position: absolute;
                 left: 0;
@@ -678,7 +677,6 @@
                 transform: translateX(-100%);
             }
 
-            /* Правая панель (окно чата) - скрыта по умолчанию */
             .right-panel {
                 position: absolute;
                 left: 0;
@@ -697,7 +695,6 @@
                 transform: translateX(0);
             }
 
-            /* Кнопка "Назад" - всегда видна в правой панели */
             .mobile-back-btn {
                 display: flex !important;
                 background: none;
@@ -717,7 +714,6 @@
                 background: rgba(0,0,0,0.05);
             }
 
-            /* Заголовок чата */
             .chat-header {
                 padding: 12px 15px;
                 background: white;
@@ -728,7 +724,6 @@
                 flex: 1;
             }
 
-            /* Сообщения */
             .messages-container {
                 padding: 15px;
             }
@@ -737,7 +732,6 @@
                 max-width: 85%;
             }
 
-            /* Поле ввода */
             .message-input-area {
                 padding: 10px;
                 background: white;
@@ -749,20 +743,17 @@
                 padding: 10px 15px;
             }
 
-            /* Модальные окна */
             .modal-content {
                 width: 95%;
                 padding: 20px;
                 max-height: 90vh;
             }
 
-            /* Скрываем лишнее */
             #noChatSelected {
                 display: flex;
             }
         }
 
-        /* Кнопка назад на десктопе - скрыта */
         .mobile-back-btn {
             display: none;
         }
@@ -809,14 +800,10 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
-    </style>        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
+
         /* Контекстное меню */
         .context-menu {
             animation: fadeIn 0.1s ease;
@@ -832,7 +819,6 @@
             to { opacity: 1; transform: scale(1); }
         }
         
-        /* Три точки в сообщениях */
         .message-menu-btn {
             opacity: 0;
             transition: opacity 0.2s;
@@ -886,25 +872,25 @@
                     <button class="btn" onclick="login()">Войти</button>
                 </div>
                 
-<!-- Форма регистрации (упрощенная) -->
-<div class="auth-form" id="registerForm">
-    <div class="form-group">
-        <label>👤 Никнейм</label>
-        <input type="text" id="regUsername" placeholder="Придумайте никнейм">
-    </div>
-    <div class="form-group">
-        <label>🔒 Пароль</label>
-        <input type="password" id="regPassword" placeholder="Придумайте пароль">
-    </div>
-    <button class="btn" onclick="register()">Зарегистрироваться</button>
-</div>
+                <!-- Форма регистрации (упрощенная) -->
+                <div class="auth-form" id="registerForm">
+                    <div class="form-group">
+                        <label>👤 Никнейм</label>
+                        <input type="text" id="regUsername" placeholder="Придумайте никнейм">
+                    </div>
+                    <div class="form-group">
+                        <label>🔒 Пароль</label>
+                        <input type="password" id="regPassword" placeholder="Придумайте пароль">
+                    </div>
+                    <button class="btn" onclick="register()">Зарегистрироваться</button>
+                </div>
 
-            </div> <!-- Закрывает auth-container -->
-        </div> <!-- Закрывает auth-screen -->
+            </div>
+        </div>
         
         <!-- Основной экран -->
         <div class="main-screen" id="mainScreen" style="display: none;">
-!-- Левая панель -->
+            <!-- Левая панель -->
             <div class="left-panel" id="leftPanel">
                 <div class="profile-header" style="display: flex; align-items: center; justify-content: space-between;">
                     <div class="profile-info" onclick="openProfileModal()" style="flex: 1; cursor: pointer;">
@@ -916,12 +902,12 @@
                     </div>
                     <button class="chat-action-btn" onclick="logout()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 12px; margin-right: 10px;" title="Выйти">🚪 Выйти</button>
                 </div>
-				
+                
                 <div class="search-box">
                     <input type="text" placeholder="Поиск чатов или пользователей..." id="searchInput" oninput="searchChats()">
                 </div>
                 
-                <!-- Кнопки действий (лаконичные) -->
+                <!-- Кнопки действий -->
                 <div style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0;">
                     <div style="display: flex; gap: 8px; margin-bottom: 6px;">
                         <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 14px;" onclick="openAddFriendModal()">➕ Добавить</button>
@@ -930,20 +916,16 @@
                     <button class="btn" style="width: 100%; padding: 8px; font-size: 14px;" onclick="openCreateGroupModal()">👥 Создать группу</button>
                 </div>
                 
-                <div class="chats-list" id="chatsList">
-                    <!-- Чаты будут загружаться сюда -->
-                </div>
+                <div class="chats-list" id="chatsList"></div>
                 
-            </div> <!-- ← ВАЖНО! Закрывает left-panel -->
+            </div>
             
             <!-- Правая панель -->
             <div class="right-panel" id="rightPanel">
                 <div class="chat-header" id="chatHeader" style="display: none;">
                     <div style="display: flex; align-items: center;">
                         <button class="mobile-back-btn" onclick="showLeftPanel()">←</button>
-                        <div class="chat-header-info" id="currentChatInfo">
-                            <!-- Информация о текущем чате -->
-                        </div>
+                        <div class="chat-header-info" id="currentChatInfo"></div>
                     </div>
                     <div class="chat-actions">
                         <button class="chat-action-btn" onclick="togglePinChat()" id="pinChatBtn">📌 Закрепить</button>
@@ -951,9 +933,7 @@
                     </div>
                 </div>
                 
-                <div class="messages-container" id="messagesContainer">
-                    <!-- Сообщения будут загружаться сюда -->
-                </div>
+                <div class="messages-container" id="messagesContainer"></div>
                 
                 <div class="message-input-area" id="messageInputArea" style="display: none;">
                     <textarea placeholder="Напишите сообщение..." id="messageInput" onkeypress="handleMessageKeyPress(event)"></textarea>
@@ -963,11 +943,10 @@
                 <div style="flex: 1; display: flex; justify-content: center; align-items: center; color: #999;" id="noChatSelected">
                     Выберите чат для начала общения
                 </div>
-            </div> <!-- Закрывает right-panel -->
-            
-        </div> <!-- Закрывает main-screen -->
+            </div>
+        </div>
         
-        <!-- Модальное окно профиля -->
+        <!-- Модальные окна -->
         <div class="modal" id="profileModal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1004,7 +983,6 @@
             </div>
         </div>
         
-		        <!-- Модальное окно добавления в друзья -->
         <div class="modal" id="addFriendModal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1020,13 +998,10 @@
                 <button class="btn" onclick="sendFriendRequest()">Отправить заявку</button>
                 
                 <h3 style="margin: 20px 0 10px;">Все пользователи</h3>
-                <div class="users-list" id="allUsersList" style="max-height: 300px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;">
-                    <!-- Пользователи будут загружаться сюда -->
-                </div>
+                <div class="users-list" id="allUsersList" style="max-height: 300px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;"></div>
             </div>
         </div>
-		
-        <!-- Модальное окно мои друзья -->
+        
         <div class="modal" id="friendsModal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1036,21 +1011,16 @@
                 
                 <div style="margin-bottom: 20px;">
                     <h3>Входящие заявки</h3>
-                    <div class="users-list" id="friendsRequestsList" style="min-height: 100px; max-height: 200px; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;">
-                        <!-- Входящие заявки будут здесь -->
-                    </div>
+                    <div class="users-list" id="friendsRequestsList" style="min-height: 100px; max-height: 200px; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;"></div>
                 </div>
                 
                 <div>
                     <h3>Мои друзья</h3>
-                    <div class="users-list" id="myFriendsList" style="max-height: 300px; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;">
-                        <!-- Список друзей будет здесь -->
-                    </div>
+                    <div class="users-list" id="myFriendsList" style="max-height: 300px; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;"></div>
                 </div>
             </div>
         </div>
         
-        <!-- Модальное окно создания группы -->
         <div class="modal" id="createGroupModal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1064,9 +1034,7 @@
                 </div>
                 
                 <h3 style="margin: 20px 0 10px;">Выберите участников</h3>
-                <div class="users-list" id="groupUsersList">
-                    <!-- Друзья для добавления в группу -->
-                </div>
+                <div class="users-list" id="groupUsersList"></div>
                 
                 <button class="btn" onclick="createGroup()">Создать группу</button>
             </div>
@@ -1079,7 +1047,7 @@
         // ============================================
         
         // Глобальные переменные
-const API_URL = 'https://chat-jy2v.onrender.com';
+        const API_URL = 'https://chat-jy2v.onrender.com';
         let currentUser = null;
         let currentChat = null;
         let chats = [];
@@ -1091,45 +1059,26 @@ const API_URL = 'https://chat-jy2v.onrender.com';
         let messagesInterval = null;
         let statusInterval = null;
         
-        // Аватары по умолчанию
         const defaultAvatars = ['😊', '🌟', '🎨', '🚀', '🌈', '🍕', '🐱', '🐶', '🦊', '🐼', '👨‍💻', '👩‍🎨', '🎮', '📚', '⚽'];
         
-        // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', () => {
             initAvatars();
             checkSavedSession();
         });
         
-        // Инициализация аватаров
         function initAvatars() {
-            const avatarSelector = document.getElementById('avatarSelector');
             const profileAvatarSelector = document.getElementById('profileAvatarSelector');
-            
-            defaultAvatars.forEach(avatar => {
-                const div = document.createElement('div');
-                div.className = 'avatar-option';
-                div.textContent = avatar;
-                div.onclick = () => selectAvatar(avatar);
-                avatarSelector.appendChild(div.cloneNode(true));
-                
-                const profileDiv = document.createElement('div');
-                profileDiv.className = 'avatar-option';
-                profileDiv.textContent = avatar;
-                profileDiv.onclick = () => selectProfileAvatar(avatar);
-                profileAvatarSelector.appendChild(profileDiv);
-            });
+            if (profileAvatarSelector) {
+                defaultAvatars.forEach(avatar => {
+                    const profileDiv = document.createElement('div');
+                    profileDiv.className = 'avatar-option';
+                    profileDiv.textContent = avatar;
+                    profileDiv.onclick = () => selectProfileAvatar(avatar);
+                    profileAvatarSelector.appendChild(profileDiv);
+                });
+            }
         }
         
-        // Выбор аватара при регистрации
-        function selectAvatar(avatar) {
-            document.querySelectorAll('#avatarSelector .avatar-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            event.target.classList.add('selected');
-            window.selectedAvatar = avatar;
-        }
-        
-        // Выбор аватара в профиле
         function selectProfileAvatar(avatar) {
             document.querySelectorAll('#profileAvatarSelector .avatar-option').forEach(opt => {
                 opt.classList.remove('selected');
@@ -1138,7 +1087,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             window.selectedProfileAvatar = avatar;
         }
         
-        // Переключение табов авторизации
         function switchAuthTab(tab) {
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
@@ -1152,7 +1100,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Проверка сохраненной сессии
         function checkSavedSession() {
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
@@ -1166,7 +1113,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Регистрация (упрощенная)
         async function register() {
             const username = document.getElementById('regUsername').value.trim();
             const password = document.getElementById('regPassword').value.trim();
@@ -1177,7 +1123,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
             
             try {
-                // Генерация ключей RSA
                 const keyPair = await generateRSAKeys();
                 const publicKey = await exportPublicKey(keyPair.publicKey);
                 const privateKey = await exportPrivateKey(keyPair.privateKey);
@@ -1211,7 +1156,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Вход
         async function login() {
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
@@ -1234,15 +1178,12 @@ const API_URL = 'https://chat-jy2v.onrender.com';
                     currentUser = data.user;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
-                    // Сохраняем приватный ключ
                     if (currentUser.privateKey) {
                         privateKeys[currentUser._id] = await importPrivateKey(currentUser.privateKey);
                     }
                     
                     showMainScreen();
                     loadUserData();
-                    
-                    // Запускаем обновление статуса
                     startStatusUpdates();
                 } else {
                     showToast(data.error || 'Ошибка входа');
@@ -1253,28 +1194,23 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-  // Показать основной экран
         function showMainScreen() {
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('mainScreen').style.display = 'flex';
             
-            // Обновляем профиль
             document.getElementById('profileAvatar').textContent = currentUser.avatar || '😊';
             document.getElementById('profileName').textContent = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username;
             document.getElementById('profileStatus').textContent = 'онлайн';
             
-            // Запускаем проверку заявок  <--- ЭТО НОВАЯ СТРОКА
             startFriendRequestsCheck();
         }
         
-        // Загрузка данных пользователя
         async function loadUserData() {
             await loadAllUsers();
             await loadFriendRequests();
             await loadFriends();
             await loadChats();
             
-            // Запускаем интервал обновления сообщений
             if (messagesInterval) clearInterval(messagesInterval);
             messagesInterval = setInterval(() => {
                 if (currentChat) {
@@ -1283,13 +1219,11 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }, 3000);
         }
         
-        // Загрузка всех пользователей
         async function loadAllUsers() {
             try {
                 const response = await fetch(`${API_URL}/users/${currentUser._id}`);
                 allUsers = await response.json();
                 
-                // Загружаем публичные ключи
                 for (const user of allUsers) {
                     if (user.publicKey) {
                         publicKeys[user._id] = await importPublicKey(user.publicKey);
@@ -1302,53 +1236,39 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Загрузка заявок в друзья
         async function loadFriendRequests() {
             try {
-                console.log('🔍 Загружаем заявки для пользователя:', currentUser._id);
-                
                 const response = await fetch(`${API_URL}/friend-requests/${currentUser._id}`);
-                console.log('📡 Статус ответа:', response.status);
-                
                 const data = await response.json();
-                console.log('📦 Данные с сервера (сырые):', data);
                 
-                // Проверяем, что пришло
                 if (Array.isArray(data)) {
-                    console.log('✅ Это массив, длина:', data.length);
                     friendRequests = data;
                 } else {
-                    console.log('❌ Это не массив:', data);
                     friendRequests = [];
                 }
                 
-                // Обновляем отображение
                 updateFriendsRequestsList();
                 
-                // Показываем бейдж если есть заявки
                 if (friendRequests.length > 0) {
-                    console.log('🔴 Есть заявки, показываем бейдж');
                     updateFriendsButtonBadge(friendRequests.length);
                 } else {
-                    console.log('⚪ Нет заявок, убираем бейдж');
                     updateFriendsButtonBadge(0);
                 }
             } catch (err) {
-                console.error('❌ Ошибка загрузки заявок:', err);
+                console.error('Ошибка загрузки заявок:', err);
             }
         }
-        // Загрузка друзей
+        
         async function loadFriends() {
             try {
                 const response = await fetch(`${API_URL}/friends/${currentUser._id}`);
                 friends = await response.json();
-                updateMyFriendsList(); // Добавлено обновление списка друзей
+                updateMyFriendsList();
             } catch (err) {
                 console.error('Ошибка загрузки друзей:', err);
             }
         }
         
-        // Загрузка чатов
         async function loadChats() {
             try {
                 const response = await fetch(`${API_URL}/chats/${currentUser._id}`);
@@ -1358,8 +1278,7 @@ const API_URL = 'https://chat-jy2v.onrender.com';
                 console.error('Ошибка загрузки чатов:', err);
             }
         }
-		
-		     // Проверка новых заявок (запускать каждые 5 секунд)
+        
         function startFriendRequestsCheck() {
             setInterval(async () => {
                 if (currentUser) {
@@ -1368,12 +1287,10 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }, 5000);
         }
         
-        // Обновление списка чатов
         function updateChatsList() {
             const chatsList = document.getElementById('chatsList');
             chatsList.innerHTML = '';
             
-            // Сортируем: закрепленные сверху, затем по времени
             const sortedChats = [...chats].sort((a, b) => {
                 if (a.isPinned && !b.isPinned) return -1;
                 if (!a.isPinned && b.isPinned) return 1;
@@ -1386,13 +1303,11 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             });
         }
         
-        // Создание элемента чата
         function createChatItem(chat) {
             const div = document.createElement('div');
             div.className = `chat-item ${chat.isPinned ? 'pinned' : ''} ${currentChat && currentChat._id === chat._id ? 'active' : ''}`;
             div.onclick = () => selectChat(chat);
             
-            // Получаем название чата
             let chatName = chat.name;
             let chatAvatar = '💬';
             
@@ -1427,213 +1342,32 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             
             return div;
         }
-                
-        // Открыть меню чата
-        function openChatMenu(chatId, event) {
-            event.stopPropagation();
-            
-            // Создаем меню
-            const menu = document.createElement('div');
-            menu.className = 'context-menu';
-            menu.style.cssText = `
-                position: absolute;
-                background: white;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                padding: 8px 0;
-                z-index: 1000;
-                min-width: 160px;
-            `;
-            
-            // Позиционируем меню
-            const rect = event.target.getBoundingClientRect();
-            menu.style.top = rect.bottom + 'px';
-            menu.style.left = rect.left - 140 + 'px';
-            
-            // Находим чат
-            const chat = chats.find(c => c._id === chatId);
-            
-            // Элементы меню
-            menu.innerHTML = `
-                <div class="menu-item" onclick="togglePinChatById('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
-                    <span>${chat?.isPinned ? '📌 Открепить' : '📌 Закрепить'}</span>
-                </div>
-                <div class="menu-item" onclick="deleteChatById('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
-                    <span>🗑️ Удалить чат</span>
-                </div>
-                <div class="menu-item" onclick="clearChatHistory('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
-                    <span>🧹 Очистить историю</span>
-                </div>
-            `;
-            
-            // Добавляем обработчик для закрытия по клику вне меню
-            document.body.appendChild(menu);
-            
-            setTimeout(() => {
-                document.addEventListener('click', function closeMenu(e) {
-                    if (!menu.contains(e.target)) {
-                        menu.remove();
-                        document.removeEventListener('click', closeMenu);
-                    }
-                });
-            }, 100);
-        }
         
-        // Закрепить чат по ID
-        async function togglePinChatById(chatId) {
-            const chat = chats.find(c => c._id === chatId);
-            if (!chat) return;
-            
-            try {
-                const url = chat.isPinned ? `${API_URL}/chats/unpin` : `${API_URL}/chats/pin`;
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUser._id,
-                        chatId: chatId
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    chat.isPinned = !chat.isPinned;
-                    await loadChats();
-                    showToast(chat.isPinned ? 'Чат закреплен' : 'Чат откреплен');
-                }
-            } catch (err) {
-                console.error('Ошибка:', err);
-                showToast('Ошибка');
-            }
-        }
-        
-        // Удалить чат по ID
-        async function deleteChatById(chatId) {
-            if (!confirm('Удалить этот чат?')) return;
-            
-            try {
-                const response = await fetch(`${API_URL}/chats/${chatId}`, {
-                    method: 'DELETE'
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    if (currentChat && currentChat._id === chatId) {
-                        currentChat = null;
-                        document.getElementById('noChatSelected').style.display = 'flex';
-                        document.getElementById('chatHeader').style.display = 'none';
-                        document.getElementById('messageInputArea').style.display = 'none';
-                        document.getElementById('messagesContainer').innerHTML = '';
-                    }
-                    await loadChats();
-                    showToast('Чат удален');
-                }
-            } catch (err) {
-                console.error('Ошибка удаления:', err);
-                showToast('Ошибка');
-            }
-        }
-        
-        // Очистить историю чата
-        async function clearChatHistory(chatId) {
-            if (!confirm('Очистить историю сообщений?')) return;
-            
-            // Здесь нужно добавить API эндпоинт для очистки истории
-            showToast('Функция в разработке');
-        }
-		
-        // Получение онлайн статуса
         function getOnlineStatus(chat) {
             if (chat.type === 'group') return false;
             const otherParticipant = chat.participants.find(p => p._id !== currentUser._id);
             return otherParticipant ? otherParticipant.isOnline : false;
         }
         
-		        
-        // Открыть меню сообщения
-        function openMessageMenu(messageId, event) {
-            event.stopPropagation();
-            
-            const menu = document.createElement('div');
-            menu.className = 'context-menu';
-            menu.style.cssText = `
-                position: absolute;
-                background: white;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                padding: 8px 0;
-                z-index: 1000;
-                min-width: 140px;
-            `;
-            
-            const rect = event.target.getBoundingClientRect();
-            menu.style.top = rect.bottom + 'px';
-            menu.style.left = rect.left - 120 + 'px';
-            
-            menu.innerHTML = `
-                <div class="menu-item" onclick="deleteMessage('${messageId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
-                    <span>🗑️ Удалить</span>
-                </div>
-                <div class="menu-item" onclick="forwardMessage('${messageId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
-                    <span>↪️ Переслать</span>
-                </div>
-            `;
-            
-            document.body.appendChild(menu);
-            
-            setTimeout(() => {
-                document.addEventListener('click', function closeMenu(e) {
-                    if (!menu.contains(e.target)) {
-                        menu.remove();
-                        document.removeEventListener('click', closeMenu);
-                    }
-                });
-            }, 100);
-        }
-        
-        // Удалить сообщение
-        async function deleteMessage(messageId) {
-            // Здесь нужно добавить API эндпоинт для удаления сообщения
-            showToast('Функция удаления сообщений в разработке');
-        }
-        
-        // Переслать сообщение
-        async function forwardMessage(messageId) {
-            showToast('Функция пересылки в разработке');
-        }
-		
-        // Выбор чата
         async function selectChat(chat) {
             currentChat = chat;
             
-            // Обновляем UI
             document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
             event.currentTarget.classList.add('active');
             
-            // Показываем правую панель
             document.getElementById('noChatSelected').style.display = 'none';
             document.getElementById('chatHeader').style.display = 'flex';
             document.getElementById('messageInputArea').style.display = 'flex';
             
-            // На мобильных устройствах
             if (window.innerWidth <= 768) {
-                // Скрываем левую панель
                 document.getElementById('leftPanel').classList.add('hidden');
-                // Показываем правую панель (добавляем класс active)
                 document.getElementById('rightPanel').classList.add('active');
             }
             
-            // Обновляем информацию о чате
             updateChatHeader();
-            
-            // Загружаем сообщения
             await loadMessages(chat._id);
         }
         
-        // Обновление заголовка чата
         function updateChatHeader() {
             const chatInfo = document.getElementById('currentChatInfo');
             const pinBtn = document.getElementById('pinChatBtn');
@@ -1666,7 +1400,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             pinBtn.textContent = currentChat.isPinned ? '📌 Открепить' : '📌 Закрепить';
         }
         
-        // Форматирование времени последнего визита
         function formatLastSeen(date) {
             if (!date) return 'давно';
             const lastSeen = new Date(date);
@@ -1679,19 +1412,16 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             return lastSeen.toLocaleDateString();
         }
         
-        // Загрузка сообщений
         async function loadMessages(chatId) {
             try {
                 const response = await fetch(`${API_URL}/messages/${chatId}`);
                 const messages = await response.json();
-                
                 displayMessages(messages);
             } catch (err) {
                 console.error('Ошибка загрузки сообщений:', err);
             }
         }
         
-        // Отображение сообщений
         async function displayMessages(messages) {
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
@@ -1702,7 +1432,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
                 
                 let messageText = msg.text;
                 
-                // Если сообщение не свое, расшифровываем
                 if (msg.senderId._id !== currentUser._id) {
                     try {
                         const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
@@ -1733,11 +1462,9 @@ const API_URL = 'https://chat-jy2v.onrender.com';
                 container.appendChild(messageDiv);
             }
             
-            // Прокрутка вниз
             container.scrollTop = container.scrollHeight;
         }
         
-        // Отправка сообщения
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -1745,7 +1472,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             if (!text || !currentChat) return;
             
             try {
-                // Получаем получателя для шифрования
                 let encryptedText = '';
                 
                 if (currentChat.type === 'private') {
@@ -1754,7 +1480,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
                         encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
                     }
                 } else {
-                    // Для групп пока просто сохраняем текст
                     encryptedText = text;
                 }
                 
@@ -1783,7 +1508,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Обработка нажатия Enter
         function handleMessageKeyPress(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -1791,10 +1515,8 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Поиск чатов
         function searchChats() {
             const query = document.getElementById('searchInput').value.toLowerCase();
-            
             document.querySelectorAll('.chat-item').forEach(item => {
                 const name = item.querySelector('.chat-name').textContent.toLowerCase();
                 if (name.includes(query)) {
@@ -1805,15 +1527,11 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             });
         }
         
-        // Показать левую панель на мобильных (кнопка "Назад")
         function showLeftPanel() {
-            // Показываем левую панель
             document.getElementById('leftPanel').classList.remove('hidden');
-            // Скрываем правую панель (убираем класс active)
             document.getElementById('rightPanel').classList.remove('active');
         }
         
-        // Закрепление/открепление чата
         async function togglePinChat() {
             if (!currentChat) return;
             
@@ -1843,7 +1561,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Удаление текущего чата
         async function deleteCurrentChat() {
             if (!currentChat || !confirm('Удалить этот чат?')) return;
             
@@ -1869,17 +1586,14 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Открыть модальное окно профиля
         function openProfileModal() {
             document.getElementById('profileUsername').value = currentUser.username;
             document.getElementById('profileFirstName').value = currentUser.firstName || '';
             document.getElementById('profileLastName').value = currentUser.lastName || '';
             document.getElementById('profileBio').value = currentUser.bio || '';
-            
             document.getElementById('profileModal').classList.add('active');
         }
         
-        // Обновление профиля
         async function updateProfile() {
             const firstName = document.getElementById('profileFirstName').value.trim();
             const lastName = document.getElementById('profileLastName').value.trim();
@@ -1921,63 +1635,40 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Открыть модальное окно добавления в друзья
         function openAddFriendModal() {
             updateAllUsersList();
             document.getElementById('addFriendModal').classList.add('active');
         }
-		        // Открыть модальное окно друзей
+        
         function openFriendsModal() {
             updateFriendsRequestsList();
             updateMyFriendsList();
             document.getElementById('friendsModal').classList.add('active');
-			updateFriendsButtonBadge(0); // <--- ДОБАВЬТЕ ЭТУ СТРОКУ
+            updateFriendsButtonBadge(0);
         }
         
-        // Обновление списка входящих заявок в окне друзей
         function updateFriendsRequestsList() {
             const list = document.getElementById('friendsRequestsList');
-            if (!list) {
-                console.log('❌ Элемент friendsRequestsList не найден');
-                return;
-            }
-            
-            console.log('🔄 Обновление списка заявок');
-            console.log('📋 Текущие friendRequests:', friendRequests);
-            
+            if (!list) return;
             list.innerHTML = '';
             
             if (!friendRequests || friendRequests.length === 0) {
-                console.log('📭 Заявок нет');
                 list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Нет входящих заявок</p>';
                 return;
             }
             
-            console.log(`📨 Найдено заявок: ${friendRequests.length}`);
-            
-            friendRequests.forEach((request, index) => {
-                console.log(`📄 Заявка #${index}:`, request);
-                
-                // Проверяем структуру заявки
+            friendRequests.forEach(request => {
                 let user = null;
                 
                 if (request.fromUserId && typeof request.fromUserId === 'object') {
                     user = request.fromUserId;
-                    console.log(`👤 Найден пользователь в fromUserId:`, user);
                 } else if (request.fromUser) {
                     user = request.fromUser;
-                    console.log(`👤 Найден пользователь в fromUser:`, user);
                 } else {
-                    console.log(`❌ Не могу найти пользователя в заявке`, request);
                     return;
                 }
                 
-                if (!user || !user.username) {
-                    console.log(`❌ Некорректные данные пользователя`, user);
-                    return;
-                }
-                
-                console.log(`✅ Создаем элемент для пользователя ${user.username}`);
+                if (!user || !user.username) return;
                 
                 const div = document.createElement('div');
                 div.className = 'user-item';
@@ -1986,8 +1677,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
                 div.style.display = 'flex';
                 div.style.alignItems = 'center';
                 div.style.justifyContent = 'space-between';
-                div.style.border = '1px solid #f0f0f0';
-                div.style.borderRadius = '10px';
                 
                 div.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -2005,27 +1694,20 @@ const API_URL = 'https://chat-jy2v.onrender.com';
                 `;
                 
                 list.appendChild(div);
-                console.log(`✅ Элемент добавлен в список`);
             });
         }
         
-        // ========== ВСТАВЬТЕ ЭТУ НОВУЮ ФУНКЦИЮ СЮДА ==========
-        // Обновление бейджа на кнопке Друзья
         function updateFriendsButtonBadge(count) {
-            // Ищем кнопку "Друзья" на странице
             const friendsBtn = document.querySelector('button[onclick="openFriendsModal()"]');
             if (friendsBtn) {
                 if (count > 0) {
-                    // Если есть заявки - добавляем красный кружок с цифрой
                     friendsBtn.innerHTML = `👥 Друзья <span style="background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; margin-left: 5px;">${count}</span>`;
                 } else {
-                    // Если заявок нет - просто текст
                     friendsBtn.innerHTML = '👥 Друзья';
                 }
             }
         }
         
-        // Обновление списка друзей
         function updateMyFriendsList() {
             const list = document.getElementById('myFriendsList');
             if (!list) return;
@@ -2060,15 +1742,12 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             });
         }
         
-        // Начать личный чат с другом
         async function startPrivateChat(friendId) {
             closeModal('friendsModal');
             
-            // Находим друга по ID
             const friend = friends.find(f => f._id === friendId);
             if (!friend) return;
             
-            // Ищем существующий чат
             const existingChat = chats.find(chat => 
                 chat.type === 'private' && 
                 chat.participants.some(p => p._id === friendId)
@@ -2077,7 +1756,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             if (existingChat) {
                 await selectChat(existingChat);
             } else {
-                // Создаем новый чат
                 try {
                     const response = await fetch(`${API_URL}/chats`, {
                         method: 'POST',
@@ -2108,9 +1786,9 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Обновление списка всех пользователей
         function updateAllUsersList() {
             const list = document.getElementById('allUsersList');
+            if (!list) return;
             list.innerHTML = '';
             
             const filteredUsers = allUsers.filter(user => 
@@ -2138,20 +1816,15 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             });
         }
         
-        
-        // Отправка заявки в друзья
         async function sendFriendRequest() {
             const username = document.getElementById('friendUsername').value.trim();
-            
             if (!username) {
                 showToast('Введите никнейм');
                 return;
             }
-            
             await sendFriendRequestToUser(username);
         }
         
-        // Отправка заявки конкретному пользователю
         async function sendFriendRequestToUser(username) {
             try {
                 const response = await fetch(`${API_URL}/friend-request`, {
@@ -2177,7 +1850,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Принятие заявки
         async function acceptFriendRequest(requestId) {
             try {
                 const response = await fetch(`${API_URL}/accept-friend`, {
@@ -2203,7 +1875,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Отклонение заявки
         async function rejectFriendRequest(requestId) {
             try {
                 const response = await fetch(`${API_URL}/reject-friend`, {
@@ -2224,9 +1895,9 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Открыть модальное окно создания группы
         function openCreateGroupModal() {
             const list = document.getElementById('groupUsersList');
+            if (!list) return;
             list.innerHTML = '';
             
             friends.forEach(friend => {
@@ -2248,16 +1919,13 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             document.getElementById('createGroupModal').classList.add('active');
         }
         
-        // Переключение участника группы
         function toggleGroupMember(userId) {
             const checkbox = event.currentTarget.querySelector('.group-member-checkbox');
             checkbox.checked = !checkbox.checked;
         }
         
-        // Создание группы
         async function createGroup() {
             const name = document.getElementById('groupName').value.trim();
-            
             if (!name) {
                 showToast('Введите название группы');
                 return;
@@ -2298,28 +1966,24 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Закрытие модального окна
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
         }
         
-        // Показ уведомления
         function showToast(message) {
             const toast = document.createElement('div');
             toast.className = 'toast';
             toast.textContent = message;
             document.body.appendChild(toast);
-            
             setTimeout(() => {
                 toast.remove();
             }, 3000);
         }
         
         // ============================================
-        // Криптография (Web Crypto API)
+        // Криптография
         // ============================================
         
-        // Генерация RSA ключей
         async function generateRSAKeys() {
             return await crypto.subtle.generateKey(
                 {
@@ -2333,19 +1997,16 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             );
         }
         
-        // Экспорт публичного ключа
         async function exportPublicKey(publicKey) {
             const exported = await crypto.subtle.exportKey("spki", publicKey);
             return btoa(String.fromCharCode(...new Uint8Array(exported)));
         }
         
-        // Экспорт приватного ключа
         async function exportPrivateKey(privateKey) {
             const exported = await crypto.subtle.exportKey("pkcs8", privateKey);
             return btoa(String.fromCharCode(...new Uint8Array(exported)));
         }
         
-        // Импорт публичного ключа
         async function importPublicKey(keyData) {
             const binary = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
             return await crypto.subtle.importKey(
@@ -2360,7 +2021,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             );
         }
         
-        // Импорт приватного ключа
         async function importPrivateKey(keyData) {
             const binary = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
             return await crypto.subtle.importKey(
@@ -2375,34 +2035,24 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             );
         }
         
-        // Шифрование сообщения
         async function encryptMessage(message, publicKey) {
             const encoder = new TextEncoder();
             const data = encoder.encode(message);
-            
             const encrypted = await crypto.subtle.encrypt(
-                {
-                    name: "RSA-OAEP"
-                },
+                { name: "RSA-OAEP" },
                 publicKey,
                 data
             );
-            
             return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
         }
         
-        // Расшифровка сообщения
         async function decryptMessage(encryptedMessage, privateKey) {
             const binary = Uint8Array.from(atob(encryptedMessage), c => c.charCodeAt(0));
-            
             const decrypted = await crypto.subtle.decrypt(
-                {
-                    name: "RSA-OAEP"
-                },
+                { name: "RSA-OAEP" },
                 privateKey,
                 binary
             );
-            
             const decoder = new TextDecoder();
             return decoder.decode(decrypted);
         }
@@ -2411,19 +2061,14 @@ const API_URL = 'https://chat-jy2v.onrender.com';
         // Статусы онлайн
         // ============================================
         
-        // Запуск обновления статусов
         function startStatusUpdates() {
-            // Отправляем статус онлайн каждые 30 секунд
             statusInterval = setInterval(updateOnlineStatus, 30000);
             updateOnlineStatus();
-            
-            // При закрытии вкладки отправляем офлайн
             window.addEventListener('beforeunload', () => {
                 setOfflineStatus();
             });
         }
         
-        // Обновление онлайн статуса
         async function updateOnlineStatus() {
             try {
                 await fetch(`${API_URL}/user/status`, {
@@ -2439,7 +2084,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Установка офлайн статуса
         async function setOfflineStatus() {
             try {
                 await fetch(`${API_URL}/user/status`, {
@@ -2456,7 +2100,6 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
         }
         
-        // Выход из аккаунта (можно добавить кнопку)
         async function logout() {
             await setOfflineStatus();
             localStorage.removeItem('currentUser');
@@ -2468,6 +2111,161 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             
             document.getElementById('authScreen').style.display = 'flex';
             document.getElementById('mainScreen').style.display = 'none';
+        }
+        
+        // Функции для контекстного меню
+        function openChatMenu(chatId, event) {
+            event.stopPropagation();
+            
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.style.cssText = `
+                position: absolute;
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                padding: 8px 0;
+                z-index: 1000;
+                min-width: 160px;
+            `;
+            
+            const rect = event.target.getBoundingClientRect();
+            menu.style.top = rect.bottom + 'px';
+            menu.style.left = rect.left - 140 + 'px';
+            
+            const chat = chats.find(c => c._id === chatId);
+            
+            menu.innerHTML = `
+                <div class="menu-item" onclick="togglePinChatById('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>${chat?.isPinned ? '📌 Открепить' : '📌 Закрепить'}</span>
+                </div>
+                <div class="menu-item" onclick="deleteChatById('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>🗑️ Удалить чат</span>
+                </div>
+                <div class="menu-item" onclick="clearChatHistory('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>🧹 Очистить историю</span>
+                </div>
+            `;
+            
+            document.body.appendChild(menu);
+            
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!menu.contains(e.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 100);
+        }
+        
+        async function togglePinChatById(chatId) {
+            const chat = chats.find(c => c._id === chatId);
+            if (!chat) return;
+            
+            try {
+                const url = chat.isPinned ? `${API_URL}/chats/unpin` : `${API_URL}/chats/pin`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUser._id,
+                        chatId: chatId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    chat.isPinned = !chat.isPinned;
+                    await loadChats();
+                    showToast(chat.isPinned ? 'Чат закреплен' : 'Чат откреплен');
+                }
+            } catch (err) {
+                console.error('Ошибка:', err);
+                showToast('Ошибка');
+            }
+        }
+        
+        async function deleteChatById(chatId) {
+            if (!confirm('Удалить этот чат?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/chats/${chatId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (currentChat && currentChat._id === chatId) {
+                        currentChat = null;
+                        document.getElementById('noChatSelected').style.display = 'flex';
+                        document.getElementById('chatHeader').style.display = 'none';
+                        document.getElementById('messageInputArea').style.display = 'none';
+                        document.getElementById('messagesContainer').innerHTML = '';
+                    }
+                    await loadChats();
+                    showToast('Чат удален');
+                }
+            } catch (err) {
+                console.error('Ошибка удаления:', err);
+                showToast('Ошибка');
+            }
+        }
+        
+        async function clearChatHistory(chatId) {
+            if (!confirm('Очистить историю сообщений?')) return;
+            showToast('Функция в разработке');
+        }
+        
+        function openMessageMenu(messageId, event) {
+            event.stopPropagation();
+            
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.style.cssText = `
+                position: absolute;
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                padding: 8px 0;
+                z-index: 1000;
+                min-width: 140px;
+            `;
+            
+            const rect = event.target.getBoundingClientRect();
+            menu.style.top = rect.bottom + 'px';
+            menu.style.left = rect.left - 120 + 'px';
+            
+            menu.innerHTML = `
+                <div class="menu-item" onclick="deleteMessage('${messageId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>🗑️ Удалить</span>
+                </div>
+                <div class="menu-item" onclick="forwardMessage('${messageId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>↪️ Переслать</span>
+                </div>
+            `;
+            
+            document.body.appendChild(menu);
+            
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!menu.contains(e.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 100);
+        }
+        
+        async function deleteMessage(messageId) {
+            showToast('Функция удаления сообщений в разработке');
+        }
+        
+        async function forwardMessage(messageId) {
+            showToast('Функция пересылки в разработке');
         }
     </script>
 </body>
