@@ -882,7 +882,7 @@
         
         <!-- Основной экран -->
         <div class="main-screen" id="mainScreen" style="display: none;">
-            <!-- Левая панель -->
+!-- Левая панель -->
             <div class="left-panel" id="leftPanel">
                 <div class="profile-header" style="display: flex; align-items: center; justify-content: space-between;">
                     <div class="profile-info" onclick="openProfileModal()" style="flex: 1; cursor: pointer;">
@@ -911,6 +911,8 @@
                 <div class="chats-list" id="chatsList">
                     <!-- Чаты будут загружаться сюда -->
                 </div>
+                
+            </div> <!-- ← ВАЖНО! Закрывает left-panel -->
             
             <!-- Правая панель -->
             <div class="right-panel" id="rightPanel">
@@ -939,8 +941,9 @@
                 <div style="flex: 1; display: flex; justify-content: center; align-items: center; color: #999;" id="noChatSelected">
                     Выберите чат для начала общения
                 </div>
-            </div>
-        </div>
+            </div> <!-- Закрывает right-panel -->
+            
+        </div> <!-- Закрывает main-screen -->
         
         <!-- Модальное окно профиля -->
         <div class="modal" id="profileModal">
