@@ -812,7 +812,29 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-    </style>
+    </style>         /* Контекстное меню */
+        .context-menu {
+            animation: fadeIn 0.1s ease;
+        }
+        
+        .menu-item:hover {
+            background: #f5f5f5;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        /* Три точки в сообщениях */
+        .message-menu-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .message:hover .message-menu-btn {
+            opacity: 1;
+        }
 </head>
 <body>
     <div id="app">
@@ -877,13 +899,13 @@
                     <input type="text" placeholder="Поиск чатов или пользователей..." id="searchInput" oninput="searchChats()">
                 </div>
                 
-                <!-- Кнопки действий ПЕРЕНЕСЕНЫ ВЫШЕ -->
-                <div style="padding: 10px 15px; border-bottom: 1px solid #f0f0f0;">
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <button class="btn btn-secondary" style="flex: 1;" onclick="openAddFriendModal()">➕ Добавить</button>
-                        <button class="btn btn-secondary" style="flex: 1;" onclick="openFriendsModal()">👥 Друзья</button>
+                <!-- Кнопки действий (лаконичные) -->
+                <div style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+                        <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 14px;" onclick="openAddFriendModal()">➕ Добавить</button>
+                        <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 14px;" onclick="openFriendsModal()">👥 Друзья</button>
                     </div>
-                    <button class="btn" style="width: 100%;" onclick="openCreateGroupModal()">👥 Создать группу</button>
+                    <button class="btn" style="width: 100%; padding: 8px; font-size: 14px;" onclick="openCreateGroupModal()">👥 Создать группу</button>
                 </div>
                 
                 <div class="chats-list" id="chatsList">
@@ -1358,26 +1380,146 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             }
             
             const lastMessage = chat.lastMessage || '';
-            const lastMessageTime = chat.lastMessageTime ? new Date(chat.lastMessageTime).toLocaleTimeString() : '';
+            const lastMessageTime = chat.lastMessageTime ? new Date(chat.lastMessageTime).toLocaleTimeString().slice(0,5) : '';
             
             div.innerHTML = `
-                <div class="chat-avatar">
+                <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px;">
                     ${chatAvatar}
                     ${chat.type === 'private' ? '<span class="online-indicator" style="background: ' + (getOnlineStatus(chat) ? '#4CAF50' : '#9e9e9e') + '"></span>' : ''}
                 </div>
-                <div class="chat-info">
-                    <div class="chat-name">
+                <div class="chat-info" style="margin-left: 5px;">
+                    <div class="chat-name" style="font-size: 15px;">
                         ${chatName}
                         ${chat.isPinned ? '<span class="pin-icon">📌</span>' : ''}
                     </div>
-                    <div class="chat-last-message">${lastMessage}</div>
+                    <div class="chat-last-message" style="font-size: 12px; color: #888;">${lastMessage}</div>
                 </div>
-                <div class="chat-time">${lastMessageTime}</div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <div class="chat-time" style="font-size: 10px; color: #999; margin-bottom: 5px;">${lastMessageTime}</div>
+                    <button class="chat-menu-btn" onclick="event.stopPropagation(); openChatMenu('${chat._id}', event)" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                </div>
             `;
             
             return div;
         }
+                
+        // Открыть меню чата
+        function openChatMenu(chatId, event) {
+            event.stopPropagation();
+            
+            // Создаем меню
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.style.cssText = `
+                position: absolute;
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                padding: 8px 0;
+                z-index: 1000;
+                min-width: 160px;
+            `;
+            
+            // Позиционируем меню
+            const rect = event.target.getBoundingClientRect();
+            menu.style.top = rect.bottom + 'px';
+            menu.style.left = rect.left - 140 + 'px';
+            
+            // Находим чат
+            const chat = chats.find(c => c._id === chatId);
+            
+            // Элементы меню
+            menu.innerHTML = `
+                <div class="menu-item" onclick="togglePinChatById('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>${chat?.isPinned ? '📌 Открепить' : '📌 Закрепить'}</span>
+                </div>
+                <div class="menu-item" onclick="deleteChatById('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>🗑️ Удалить чат</span>
+                </div>
+                <div class="menu-item" onclick="clearChatHistory('${chatId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>🧹 Очистить историю</span>
+                </div>
+            `;
+            
+            // Добавляем обработчик для закрытия по клику вне меню
+            document.body.appendChild(menu);
+            
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!menu.contains(e.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 100);
+        }
         
+        // Закрепить чат по ID
+        async function togglePinChatById(chatId) {
+            const chat = chats.find(c => c._id === chatId);
+            if (!chat) return;
+            
+            try {
+                const url = chat.isPinned ? `${API_URL}/chats/unpin` : `${API_URL}/chats/pin`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUser._id,
+                        chatId: chatId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    chat.isPinned = !chat.isPinned;
+                    await loadChats();
+                    showToast(chat.isPinned ? 'Чат закреплен' : 'Чат откреплен');
+                }
+            } catch (err) {
+                console.error('Ошибка:', err);
+                showToast('Ошибка');
+            }
+        }
+        
+        // Удалить чат по ID
+        async function deleteChatById(chatId) {
+            if (!confirm('Удалить этот чат?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/chats/${chatId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (currentChat && currentChat._id === chatId) {
+                        currentChat = null;
+                        document.getElementById('noChatSelected').style.display = 'flex';
+                        document.getElementById('chatHeader').style.display = 'none';
+                        document.getElementById('messageInputArea').style.display = 'none';
+                        document.getElementById('messagesContainer').innerHTML = '';
+                    }
+                    await loadChats();
+                    showToast('Чат удален');
+                }
+            } catch (err) {
+                console.error('Ошибка удаления:', err);
+                showToast('Ошибка');
+            }
+        }
+        
+        // Очистить историю чата
+        async function clearChatHistory(chatId) {
+            if (!confirm('Очистить историю сообщений?')) return;
+            
+            // Здесь нужно добавить API эндпоинт для очистки истории
+            showToast('Функция в разработке');
+        }
+		
         // Получение онлайн статуса
         function getOnlineStatus(chat) {
             if (chat.type === 'group') return false;
@@ -1385,6 +1527,59 @@ const API_URL = 'https://chat-jy2v.onrender.com';
             return otherParticipant ? otherParticipant.isOnline : false;
         }
         
+		        
+        // Открыть меню сообщения
+        function openMessageMenu(messageId, event) {
+            event.stopPropagation();
+            
+            const menu = document.createElement('div');
+            menu.className = 'context-menu';
+            menu.style.cssText = `
+                position: absolute;
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                padding: 8px 0;
+                z-index: 1000;
+                min-width: 140px;
+            `;
+            
+            const rect = event.target.getBoundingClientRect();
+            menu.style.top = rect.bottom + 'px';
+            menu.style.left = rect.left - 120 + 'px';
+            
+            menu.innerHTML = `
+                <div class="menu-item" onclick="deleteMessage('${messageId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>🗑️ Удалить</span>
+                </div>
+                <div class="menu-item" onclick="forwardMessage('${messageId}'); this.parentElement.remove();" style="padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <span>↪️ Переслать</span>
+                </div>
+            `;
+            
+            document.body.appendChild(menu);
+            
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!menu.contains(e.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 100);
+        }
+        
+        // Удалить сообщение
+        async function deleteMessage(messageId) {
+            // Здесь нужно добавить API эндпоинт для удаления сообщения
+            showToast('Функция удаления сообщений в разработке');
+        }
+        
+        // Переслать сообщение
+        async function forwardMessage(messageId) {
+            showToast('Функция пересылки в разработке');
+        }
+		
         // Выбор чата
         async function selectChat(chat) {
             currentChat = chat;
@@ -1500,8 +1695,11 @@ const API_URL = 'https://chat-jy2v.onrender.com';
                 
                 messageDiv.innerHTML = `
                     <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
-                    <div class="message-content">
-                        <div class="message-sender">${senderName}</div>
+                    <div class="message-content" style="position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="message-sender">${senderName}</div>
+                            <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                        </div>
                         <div class="message-text">${messageText}</div>
                         <div class="message-time">${time}</div>
                     </div>
