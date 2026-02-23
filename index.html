@@ -1402,51 +1402,64 @@
             });
         }
         
-        function createChatItem(chat) {
-            const div = document.createElement('div');
-            div.className = `chat-item ${chat.isPinned ? 'pinned' : ''} ${currentChat && currentChat._id === chat._id ? 'active' : ''}`;
-            div.onclick = () => selectChat(chat);
-            
-            let chatName = chat.name;
-            let chatAvatar = '💬';
-            let unreadCount = chat.unreadCount || 0;
-            
-            if (chat.type === 'private') {
-                const otherParticipant = chat.participants.find(p => p._id !== currentUser._id);
-                if (otherParticipant) {
-                    chatName = `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username;
-                    chatAvatar = otherParticipant.avatar || '😊';
-                }
-            }
-            
-            const lastMessage = chat.lastMessage || '';
-            const lastMessageTime = chat.lastMessageTime ? new Date(chat.lastMessageTime).toLocaleTimeString().slice(0,5) : '';
-            
-            // Формируем HTML для счетчика непрочитанных
-            const unreadBadge = unreadCount > 0 ? 
-                `<span style="background: #667eea; color: white; border-radius: 50%; min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; padding: 0 4px; margin-left: 5px;">${unreadCount}</span>` : '';
-            
-            div.innerHTML = `
-                <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px; position: relative;">
-                    ${chatAvatar}
-                    ${chat.type === 'private' ? '<span class="online-indicator" style="background: ' + (getOnlineStatus(chat) ? '#4CAF50' : '#9e9e9e') + '"></span>' : ''}
-                </div>
-                <div class="chat-info" style="margin-left: 5px;">
-                    <div class="chat-name" style="font-size: 15px; display: flex; align-items: center;">
-                        ${chatName}
-                        ${unreadBadge}
-                        ${chat.isPinned ? '<span class="pin-icon" style="margin-left: 5px;">📌</span>' : ''}
-                    </div>
-                    <div class="chat-last-message" style="font-size: 12px; color: #888; ${unreadCount > 0 ? 'font-weight: bold; color: #333;' : ''}">${lastMessage}</div>
-                </div>
-                <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                    <div class="chat-time" style="font-size: 10px; color: #999; margin-bottom: 5px;">${lastMessageTime}</div>
-                    <button class="chat-menu-btn" onclick="event.stopPropagation(); openChatMenu('${chat._id}', event)" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
-                </div>
-            `;
-            
-            return div;
+function createChatItem(chat) {
+    const div = document.createElement('div');
+    div.className = `chat-item ${chat.isPinned ? 'pinned' : ''} ${currentChat && currentChat._id === chat._id ? 'active' : ''}`;
+    div.onclick = () => selectChat(chat);
+    
+    let chatName = chat.name;
+    let chatAvatar = '💬';
+    let unreadCount = chat.unreadCount || 0;
+    
+    if (chat.type === 'private') {
+        const otherParticipant = chat.participants.find(p => p._id !== currentUser._id);
+        if (otherParticipant) {
+            chatName = `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username;
+            chatAvatar = otherParticipant.avatar || '😊';
         }
+    }
+    
+    // Получаем текст последнего сообщения
+    let lastMessageText = '';
+    if (chat.lastMessage && typeof chat.lastMessage === 'object') {
+        lastMessageText = chat.lastMessage.text || '';
+    } else {
+        lastMessageText = chat.lastMessage || '';
+    }
+    
+    // Получаем время последнего сообщения
+    let lastMessageTime = '';
+    if (chat.lastMessage && chat.lastMessage.createdAt) {
+        lastMessageTime = new Date(chat.lastMessage.createdAt).toLocaleTimeString().slice(0,5);
+    } else if (chat.lastMessageTime) {
+        lastMessageTime = new Date(chat.lastMessageTime).toLocaleTimeString().slice(0,5);
+    }
+    
+    // Формируем HTML для счетчика непрочитанных
+    const unreadBadge = unreadCount > 0 ? 
+        `<span style="background: #667eea; color: white; border-radius: 50%; min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; padding: 0 4px; margin-left: 5px;">${unreadCount}</span>` : '';
+    
+    div.innerHTML = `
+        <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px; position: relative;">
+            ${chatAvatar}
+            ${chat.type === 'private' ? '<span class="online-indicator" style="background: ' + (getOnlineStatus(chat) ? '#4CAF50' : '#9e9e9e') + '"></span>' : ''}
+        </div>
+        <div class="chat-info" style="margin-left: 5px;">
+            <div class="chat-name" style="font-size: 15px; display: flex; align-items: center;">
+                ${chatName}
+                ${unreadBadge}
+                ${chat.isPinned ? '<span class="pin-icon" style="margin-left: 5px;">📌</span>' : ''}
+            </div>
+            <div class="chat-last-message" style="font-size: 12px; color: #888; ${unreadCount > 0 ? 'font-weight: bold; color: #333;' : ''}">${lastMessageText}</div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+            <div class="chat-time" style="font-size: 10px; color: #999; margin-bottom: 5px;">${lastMessageTime}</div>
+            <button class="chat-menu-btn" onclick="event.stopPropagation(); openChatMenu('${chat._id}', event)" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+        </div>
+    `;
+    
+    return div;
+}
         
         function getOnlineStatus(chat) {
             if (chat.type === 'group') return false;
