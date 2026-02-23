@@ -180,13 +180,7 @@ const pinnedChatSchema = new mongoose.Schema({
     chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true }
 });
 
-// Создание моделей
-const User = mongoose.model('User', userSchema);
-const FriendRequest = mongoose.model('FriendRequest', friendRequestSchema);
-const Friend = mongoose.model('Friend', friendSchema);
-const Chat = mongoose.model('Chat', chatSchema);
-const Message = mongoose.model('Message', messageSchema);
-const PinnedChat = mongoose.model('PinnedChat', pinnedChatSchema);
+
 
 // ============================================
 // API Эндпоинты
