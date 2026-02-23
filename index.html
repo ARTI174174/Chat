@@ -1060,6 +1060,42 @@
         let statusInterval = null;
         
         const defaultAvatars = ['😊', '🌟', '🎨', '🚀', '🌈', '🍕', '🐱', '🐶', '🦊', '🐼', '👨‍💻', '👩‍🎨', '🎮', '📚', '⚽'];
+		
+		// Функция для запросов с авторизацией
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showToast('Требуется авторизация');
+                logout();
+                return null;
+            }
+            
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        ...options.headers,
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': options.headers?.['Content-Type'] || 'application/json'
+                    }
+                });
+                
+                // Если токен недействителен (401 или 403)
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('currentUser');
+                    showToast('Сессия истекла, войдите снова');
+                    logout();
+                    return null;
+                }
+                
+                return response;
+            } catch (err) {
+                console.error('Ошибка сети:', err);
+                showToast('Ошибка соединения');
+                return null;
+            }
+        }
         
         document.addEventListener('DOMContentLoaded', () => {
             initAvatars();
@@ -1102,14 +1138,21 @@
         
         function checkSavedSession() {
             const savedUser = localStorage.getItem('currentUser');
-            if (savedUser) {
+            const token = localStorage.getItem('token');
+            
+            if (savedUser && token) {
                 try {
                     currentUser = JSON.parse(savedUser);
                     showMainScreen();
                     loadUserData();
                 } catch (e) {
                     console.error('Ошибка загрузки сессии:', e);
+                    logout();
                 }
+            } else {
+                // Если нет токена или пользователя - очищаем
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('token');
             }
         }
         
@@ -1177,6 +1220,7 @@
                 if (data.success) {
                     currentUser = data.user;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    localStorage.setItem('token', data.token); // ← СОХРАНЯЕМ ТОКЕН
                     
                     if (currentUser.privateKey) {
                         privateKeys[currentUser._id] = await importPrivateKey(currentUser.privateKey);
@@ -1221,7 +1265,9 @@
         
         async function loadAllUsers() {
             try {
-                const response = await fetch(`${API_URL}/users/${currentUser._id}`);
+                const response = await fetchWithAuth(`${API_URL}/users/${currentUser._id}`);
+                if (!response) return;
+                
                 allUsers = await response.json();
                 
                 for (const user of allUsers) {
@@ -1238,7 +1284,9 @@
         
         async function loadFriendRequests() {
             try {
-                const response = await fetch(`${API_URL}/friend-requests/${currentUser._id}`);
+                const response = await fetchWithAuth(`${API_URL}/friend-requests/${currentUser._id}`);
+                if (!response) return;
+                
                 const data = await response.json();
                 
                 if (Array.isArray(data)) {
@@ -1261,7 +1309,9 @@
         
         async function loadFriends() {
             try {
-                const response = await fetch(`${API_URL}/friends/${currentUser._id}`);
+                const response = await fetchWithAuth(`${API_URL}/friends/${currentUser._id}`);
+                if (!response) return;
+                
                 friends = await response.json();
                 updateMyFriendsList();
             } catch (err) {
@@ -1271,7 +1321,9 @@
         
         async function loadChats() {
             try {
-                const response = await fetch(`${API_URL}/chats/${currentUser._id}`);
+                const response = await fetchWithAuth(`${API_URL}/chats/${currentUser._id}`);
+                if (!response) return;
+                
                 chats = await response.json();
                 updateChatsList();
             } catch (err) {
@@ -1414,7 +1466,9 @@
         
         async function loadMessages(chatId) {
             try {
-                const response = await fetch(`${API_URL}/messages/${chatId}`);
+                const response = await fetchWithAuth(`${API_URL}/messages/${chatId}`);
+                if (!response) return;
+                
                 const messages = await response.json();
                 displayMessages(messages);
             } catch (err) {
@@ -1483,7 +1537,7 @@
                     encryptedText = text;
                 }
                 
-                const response = await fetch(`${API_URL}/messages`, {
+                const response = await fetchWithAuth(`${API_URL}/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1494,6 +1548,8 @@
                         encryptedText
                     })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -1538,7 +1594,7 @@
             try {
                 const url = currentChat.isPinned ? `${API_URL}/chats/unpin` : `${API_URL}/chats/pin`;
                 
-                const response = await fetch(url, {
+                const response = await fetchWithAuth(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1546,6 +1602,8 @@
                         chatId: currentChat._id
                     })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -1565,9 +1623,11 @@
             if (!currentChat || !confirm('Удалить этот чат?')) return;
             
             try {
-                const response = await fetch(`${API_URL}/chats/${currentChat._id}`, {
+                const response = await fetchWithAuth(`${API_URL}/chats/${currentChat._id}`, {
                     method: 'DELETE'
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -1601,7 +1661,7 @@
             const avatar = window.selectedProfileAvatar || currentUser.avatar;
             
             try {
-                const response = await fetch(`${API_URL}/user/update`, {
+                const response = await fetchWithAuth(`${API_URL}/user/update`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1612,6 +1672,8 @@
                         avatar
                     })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -1757,7 +1819,7 @@
                 await selectChat(existingChat);
             } else {
                 try {
-                    const response = await fetch(`${API_URL}/chats`, {
+                    const response = await fetchWithAuth(`${API_URL}/chats`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1766,6 +1828,8 @@
                             createdBy: currentUser._id
                         })
                     });
+                    
+                    if (!response) return;
                     
                     const data = await response.json();
                     
@@ -1827,7 +1891,7 @@
         
         async function sendFriendRequestToUser(username) {
             try {
-                const response = await fetch(`${API_URL}/friend-request`, {
+                const response = await fetchWithAuth(`${API_URL}/friend-request`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1835,6 +1899,8 @@
                         toUsername: username
                     })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -1852,7 +1918,7 @@
         
         async function acceptFriendRequest(requestId) {
             try {
-                const response = await fetch(`${API_URL}/accept-friend`, {
+                const response = await fetchWithAuth(`${API_URL}/accept-friend`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1860,6 +1926,8 @@
                         userId: currentUser._id
                     })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -1877,11 +1945,13 @@
         
         async function rejectFriendRequest(requestId) {
             try {
-                const response = await fetch(`${API_URL}/reject-friend`, {
+                const response = await fetchWithAuth(`${API_URL}/reject-friend`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requestId })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -1942,7 +2012,7 @@
             const participants = [currentUser._id, ...selectedMembers];
             
             try {
-                const response = await fetch(`${API_URL}/chats`, {
+                const response = await fetchWithAuth(`${API_URL}/chats`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1952,6 +2022,8 @@
                         createdBy: currentUser._id
                     })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -2071,7 +2143,7 @@
         
         async function updateOnlineStatus() {
             try {
-                await fetch(`${API_URL}/user/status`, {
+                await fetchWithAuth(`${API_URL}/user/status`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2086,7 +2158,7 @@
         
         async function setOfflineStatus() {
             try {
-                await fetch(`${API_URL}/user/status`, {
+                await fetchWithAuth(`${API_URL}/user/status`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2103,6 +2175,7 @@
         async function logout() {
             await setOfflineStatus();
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('token'); // ← УДАЛЯЕМ ТОКЕН
             currentUser = null;
             currentChat = null;
             
@@ -2166,7 +2239,7 @@
             try {
                 const url = chat.isPinned ? `${API_URL}/chats/unpin` : `${API_URL}/chats/pin`;
                 
-                const response = await fetch(url, {
+                const response = await fetchWithAuth(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2174,6 +2247,8 @@
                         chatId: chatId
                     })
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 
@@ -2192,9 +2267,11 @@
             if (!confirm('Удалить этот чат?')) return;
             
             try {
-                const response = await fetch(`${API_URL}/chats/${chatId}`, {
+                const response = await fetchWithAuth(`${API_URL}/chats/${chatId}`, {
                     method: 'DELETE'
                 });
+                
+                if (!response) return;
                 
                 const data = await response.json();
                 

@@ -7,10 +7,15 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');          // ← НОВОЕ
+const rateLimit = require('express-rate-limit'); // ← НОВОЕ
+const { v4: uuidv4 } = require('uuid');       // ← НОВОЕ
+const helmet = require('helmet');              // ← НОВОЕ
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ziganurov174_db_user:OABwcyu32hni3Tum@cluster0.y30awkl.mongodb.net/didi_messenger?retryWrites=true&w=majority';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-this-please-123!'; // ← НОВОЕ
 
 // Middleware
 app.use(cors({
@@ -20,6 +25,50 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ============================================
+// Middleware для проверки JWT токена
+// ============================================
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+    
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Недействительный токен' });
+        }
+        req.user = user;
+        next();
+    });
+}
+
+// ============================================
+// Подключение к MongoDB
+// ============================================
+
+// Helmet для безопасности заголовков
+app.use(helmet()); // ← НОВОЕ
+
+// Rate limiting для всех запросов
+const limiter = rateLimit({ // ← НОВОЕ
+    windowMs: 15 * 60 * 1000, // 15 минут
+    max: 100, // максимум 100 запросов с одного IP
+    message: { error: 'Слишком много запросов, попробуйте позже' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+app.use('/api/', limiter); // ← НОВОЕ
+
+// Особо строгий лимит для входа
+const loginLimiter = rateLimit({ // ← НОВОЕ
+    windowMs: 15 * 60 * 1000,
+    max: 5, // только 5 попыток за 15 минут
+    message: { error: 'Слишком много попыток входа, попробуйте позже' }
+});
 
 
 
@@ -159,7 +208,7 @@ app.post('/register', async (req, res) => {
 });
 
 // Вход
-app.post('/login', async (req, res) => {
+app.post('/login', loginLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
         
@@ -175,6 +224,13 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Неверный логин или пароль' });
         }
         
+        // Создаем JWT токен
+        const token = jwt.sign(
+            { userId: user._id, username: user.username },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+        
         // Обновление статуса онлайн
         user.isOnline = true;
         user.lastSeen = new Date();
@@ -182,6 +238,7 @@ app.post('/login', async (req, res) => {
         
         res.json({
             success: true,
+            token,
             user: {
                 _id: user._id,
                 username: user.username,
@@ -203,17 +260,22 @@ app.post('/login', async (req, res) => {
 // Пользователи
 // ------------------------------
 
-// Получение всех пользователей кроме текущего
-app.get('/users/:userId', async (req, res) => {
+// Получение списка друзей
+app.get('/friends/:userId', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.params;
         
-        const users = await User.find({ _id: { $ne: userId } })
-            .select('_id username avatar firstName lastName bio isOnline lastSeen publicKey');
+        // Проверяем, что пользователь запрашивает свои данные
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа к этим данным' });
+        }
         
-        res.json(users);
+        const friends = await Friend.find({ userId })
+            .populate('friendId', '_id username avatar firstName lastName isOnline lastSeen');
+        
+        res.json(friends.map(f => f.friendId));
     } catch (err) {
-        console.error('Ошибка получения пользователей:', err);
+        console.error('Ошибка получения друзей:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });
@@ -223,9 +285,14 @@ app.get('/users/:userId', async (req, res) => {
 // ------------------------------
 
 // Отправка заявки в друзья
-app.post('/friend-request', async (req, res) => {
+app.post('/friend-request', authenticateToken, async (req, res) => {
     try {
         const { fromUserId, toUsername } = req.body;
+        
+        // Проверяем, что пользователь отправляет заявку от своего имени
+        if (req.user.userId !== fromUserId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
         
         // Поиск пользователя по нику
         const toUser = await User.findOne({ username: toUsername });
@@ -272,14 +339,25 @@ app.post('/friend-request', async (req, res) => {
     }
 });
 
+
 // Принятие заявки в друзья
-app.post('/accept-friend', async (req, res) => {
+app.post('/accept-friend', authenticateToken, async (req, res) => {
     try {
         const { requestId, userId } = req.body;
+        
+        // Проверяем, что пользователь принимает заявку от своего имени
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
         
         const request = await FriendRequest.findById(requestId);
         if (!request) {
             return res.status(404).json({ error: 'Заявка не найдена' });
+        }
+        
+        // Проверяем, что заявка адресована этому пользователю
+        if (request.toUserId.toString() !== userId) {
+            return res.status(403).json({ error: 'Это не ваша заявка' });
         }
         
         // Обновление статуса заявки
@@ -322,9 +400,19 @@ app.post('/accept-friend', async (req, res) => {
 });
 
 // Отклонение заявки
-app.post('/reject-friend', async (req, res) => {
+app.post('/reject-friend', authenticateToken, async (req, res) => {
     try {
         const { requestId } = req.body;
+        
+        const request = await FriendRequest.findById(requestId);
+        if (!request) {
+            return res.status(404).json({ error: 'Заявка не найдена' });
+        }
+        
+        // Проверяем, что заявка адресована этому пользователю
+        if (request.toUserId.toString() !== req.user.userId) {
+            return res.status(403).json({ error: 'Это не ваша заявка' });
+        }
         
         await FriendRequest.findByIdAndDelete(requestId);
         
@@ -335,25 +423,15 @@ app.post('/reject-friend', async (req, res) => {
     }
 });
 
-// Получение списка друзей
-app.get('/friends/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        
-        const friends = await Friend.find({ userId })
-            .populate('friendId', '_id username avatar firstName lastName isOnline lastSeen');
-        
-        res.json(friends.map(f => f.friendId));
-    } catch (err) {
-        console.error('Ошибка получения друзей:', err);
-        res.status(500).json({ error: 'Ошибка сервера' });
-    }
-});
-
 // Получение входящих заявок
-app.get('/friend-requests/:userId', async (req, res) => {
+app.get('/friend-requests/:userId', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.params;
+        
+        // Проверяем, что пользователь запрашивает свои заявки
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
         
         const requests = await FriendRequest.find({ toUserId: userId, status: 'pending' })
             .populate('fromUserId', '_id username avatar firstName lastName');
@@ -365,14 +443,40 @@ app.get('/friend-requests/:userId', async (req, res) => {
     }
 });
 
+
+// Получение всех пользователей кроме текущего
+app.get('/users/:userId', authenticateToken, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Проверяем, что пользователь запрашивает свои данные
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
+        
+        const users = await User.find({ _id: { $ne: userId } })
+            .select('_id username avatar firstName lastName bio isOnline lastSeen publicKey');
+        
+        res.json(users);
+    } catch (err) {
+        console.error('Ошибка получения пользователей:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
 // ------------------------------
 // Чаты
 // ------------------------------
 
 // Создание чата
-app.post('/chats', async (req, res) => {
+app.post('/chats', authenticateToken, async (req, res) => {
     try {
         const { type, name, participants, createdBy } = req.body;
+        
+        // Проверяем, что создатель чата - текущий пользователь
+        if (req.user.userId !== createdBy) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
         
         // Для личных чатов проверяем существование
         if (type === 'private') {
@@ -403,9 +507,14 @@ app.post('/chats', async (req, res) => {
 });
 
 // Получение чатов пользователя
-app.get('/chats/:userId', async (req, res) => {
+app.get('/chats/:userId', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.params;
+        
+        // Проверяем, что пользователь запрашивает свои чаты
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
         
         const chats = await Chat.find({ participants: userId })
             .populate('participants', '_id username avatar firstName lastName isOnline lastSeen')
@@ -437,9 +546,20 @@ app.get('/chats/:userId', async (req, res) => {
 });
 
 // Закрепление чата
-app.post('/chats/pin', async (req, res) => {
+app.post('/chats/pin', authenticateToken, async (req, res) => {
     try {
         const { userId, chatId } = req.body;
+        
+        // Проверяем, что пользователь закрепляет для себя
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
+        
+        // Проверяем, что пользователь участвует в чате
+        const chat = await Chat.findById(chatId);
+        if (!chat || !chat.participants.includes(userId)) {
+            return res.status(403).json({ error: 'Вы не участник этого чата' });
+        }
         
         const pinned = new PinnedChat({ userId, chatId });
         await pinned.save();
@@ -452,9 +572,14 @@ app.post('/chats/pin', async (req, res) => {
 });
 
 // Открепление чата
-app.post('/chats/unpin', async (req, res) => {
+app.post('/chats/unpin', authenticateToken, async (req, res) => {
     try {
         const { userId, chatId } = req.body;
+        
+        // Проверяем, что пользователь открепляет для себя
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
         
         await PinnedChat.findOneAndDelete({ userId, chatId });
         
@@ -466,9 +591,15 @@ app.post('/chats/unpin', async (req, res) => {
 });
 
 // Удаление чата
-app.delete('/chats/:chatId', async (req, res) => {
+app.delete('/chats/:chatId', authenticateToken, async (req, res) => {
     try {
         const { chatId } = req.params;
+        
+        // Проверяем, что пользователь является участником чата
+        const chat = await Chat.findById(chatId);
+        if (!chat || !chat.participants.includes(req.user.userId)) {
+            return res.status(403).json({ error: 'Нет доступа к этому чату' });
+        }
         
         await Chat.findByIdAndDelete(chatId);
         await Message.deleteMany({ chatId });
@@ -486,9 +617,20 @@ app.delete('/chats/:chatId', async (req, res) => {
 // ------------------------------
 
 // Отправка сообщения
-app.post('/messages', async (req, res) => {
+app.post('/messages', authenticateToken, async (req, res) => {
     try {
         const { chatId, senderId, senderName, text, encryptedText } = req.body;
+        
+        // Проверяем, что отправитель - текущий пользователь
+        if (req.user.userId !== senderId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
+        
+        // Проверяем, что пользователь участвует в чате
+        const chat = await Chat.findById(chatId);
+        if (!chat || !chat.participants.includes(req.user.userId)) {
+            return res.status(403).json({ error: 'Вы не участник этого чата' });
+        }
         
         const message = new Message({
             chatId,
@@ -514,9 +656,15 @@ app.post('/messages', async (req, res) => {
 });
 
 // Получение сообщений из чата
-app.get('/messages/:chatId', async (req, res) => {
+app.get('/messages/:chatId', authenticateToken, async (req, res) => {
     try {
         const { chatId } = req.params;
+        
+        // Проверяем, что пользователь участвует в чате
+        const chat = await Chat.findById(chatId);
+        if (!chat || !chat.participants.includes(req.user.userId)) {
+            return res.status(403).json({ error: 'Вы не участник этого чата' });
+        }
         
         const messages = await Message.find({ chatId })
             .populate('senderId', '_id username avatar firstName lastName')
@@ -534,9 +682,14 @@ app.get('/messages/:chatId', async (req, res) => {
 // ------------------------------
 
 // Обновление профиля
-app.post('/user/update', async (req, res) => {
+app.post('/user/update', authenticateToken, async (req, res) => {
     try {
         const { userId, firstName, lastName, bio, avatar } = req.body;
+        
+        // Проверяем, что пользователь обновляет свой профиль
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
         
         const updateData = {};
         if (firstName !== undefined) updateData.firstName = firstName;
@@ -554,9 +707,14 @@ app.post('/user/update', async (req, res) => {
 });
 
 // Обновление статуса онлайн
-app.post('/user/status', async (req, res) => {
+app.post('/user/status', authenticateToken, async (req, res) => {
     try {
         const { userId, isOnline } = req.body;
+        
+        // Проверяем, что пользователь обновляет свой статус
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
         
         await User.findByIdAndUpdate(userId, {
             isOnline,
