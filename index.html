@@ -1486,7 +1486,8 @@
                 
                 let messageText = msg.text;
                 
-                if (msg.senderId._id !== currentUser._id) {
+                // Для личных чатов пытаемся расшифровать
+                if (currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
                     try {
                         const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
                         if (otherParticipant && privateKeys[currentUser._id]) {
@@ -1498,8 +1499,13 @@
                     }
                 }
                 
+                // Для групповых чатов показываем обычный текст
+                if (currentChat.type === 'group') {
+                    messageText = msg.text;
+                }
+                
                 const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
-                const time = new Date(msg.createdAt).toLocaleTimeString();
+                const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
                 
                 messageDiv.innerHTML = `
                     <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
@@ -1526,15 +1532,14 @@
             if (!text || !currentChat) return;
             
             try {
-                let encryptedText = '';
+                let encryptedText = text; // По умолчанию без шифрования
                 
+                // Для групповых чатов пока не шифруем (в разработке)
                 if (currentChat.type === 'private') {
                     const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
                     if (otherParticipant && publicKeys[otherParticipant._id]) {
                         encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
                     }
-                } else {
-                    encryptedText = text;
                 }
                 
                 const response = await fetchWithAuth(`${API_URL}/messages`, {
@@ -1544,7 +1549,7 @@
                         chatId: currentChat._id,
                         senderId: currentUser._id,
                         senderName: currentUser.username,
-                        text,
+                        text, // ← Отправляем обычный текст для групповых чатов
                         encryptedText
                     })
                 });
