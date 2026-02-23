@@ -138,8 +138,31 @@ const chatSchema = new mongoose.Schema({
     lastMessage: { type: String, default: '' },
     lastMessageTime: { type: Date, default: Date.now },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    // Храним количество непрочитанных сообщений для каждого участника
+    unreadCount: { type: Map, of: Number, default: {} }
 });
+
+// ========== НОВАЯ СХЕМА ==========
+// Схема прочитанных сообщений
+const readReceiptSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
+    chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true },
+    readAt: { type: Date, default: Date.now }
+});
+
+// Составной индекс для уникальности (пользователь + сообщение)
+readReceiptSchema.index({ userId: 1, messageId: 1 }, { unique: true });
+
+// Создание модели
+const User = mongoose.model('User', userSchema);
+const FriendRequest = mongoose.model('FriendRequest', friendRequestSchema);
+const Friend = mongoose.model('Friend', friendSchema);
+const Chat = mongoose.model('Chat', chatSchema);
+const Message = mongoose.model('Message', messageSchema);
+const PinnedChat = mongoose.model('PinnedChat', pinnedChatSchema);
+const ReadReceipt = mongoose.model('ReadReceipt', readReceiptSchema); // ← НОВОЕ
 
 // Схема сообщений
 const messageSchema = new mongoose.Schema({
@@ -538,9 +561,13 @@ app.get('/chats/:userId', authenticateToken, async (req, res) => {
             const lastMessage = await Message.findOne({ chatId: chat._id })
                 .sort({ createdAt: -1 });
             
+            // Получаем количество непрочитанных для текущего пользователя
+            const unreadCount = chat.unreadCount?.get(userId) || 0;
+            
             return {
                 ...chat.toObject(),
                 isPinned: pinnedChats.includes(chat._id.toString()),
+                unreadCount, // ← ЭТО НОВАЯ СТРОКА
                 lastMessage: lastMessage ? {
                     text: lastMessage.text,
                     senderName: lastMessage.senderName,
@@ -811,6 +838,18 @@ app.post('/messages', authenticateToken, async (req, res) => {
             lastMessageTime: new Date()
         });
         
+        // Увеличиваем счетчик непрочитанных для всех участников, кроме отправителя
+        const participants = chat.participants.filter(p => p.toString() !== senderId);
+        
+        // Обновляем unreadCount для каждого участника
+        participants.forEach(async (participantId) => {
+            const key = participantId.toString();
+            const currentCount = chat.unreadCount?.get(key) || 0;
+            chat.unreadCount.set(key, currentCount + 1);
+        });
+        
+        await chat.save();
+        
         res.json({ success: true, message });
     } catch (err) {
         console.error('Ошибка отправки сообщения:', err);
@@ -865,6 +904,61 @@ app.post('/user/update', authenticateToken, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error('Ошибка обновления профиля:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Отметить сообщения как прочитанные
+app.post('/chats/:chatId/read', authenticateToken, async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const userId = req.user.userId;
+        
+        // Находим чат
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ error: 'Чат не найден' });
+        }
+        
+        // Проверяем, что пользователь является участником
+        if (!chat.participants.includes(userId)) {
+            return res.status(403).json({ error: 'Вы не участник этого чата' });
+        }
+        
+        // Получаем все непрочитанные сообщения в чате
+        const messages = await Message.find({ 
+            chatId, 
+            senderId: { $ne: userId } // Не свои сообщения
+        });
+        
+        // Создаем записи о прочтении для каждого сообщения
+        const readReceipts = messages.map(msg => ({
+            userId,
+            messageId: msg._id,
+            chatId,
+            readAt: new Date()
+        }));
+        
+        // Используем bulkWrite для вставки с игнорированием дубликатов
+        if (readReceipts.length > 0) {
+            await ReadReceipt.bulkWrite(
+                readReceipts.map(receipt => ({
+                    updateOne: {
+                        filter: { userId: receipt.userId, messageId: receipt.messageId },
+                        update: { $set: receipt },
+                        upsert: true
+                    }
+                }))
+            );
+        }
+        
+        // Сбрасываем счетчик непрочитанных для пользователя
+        chat.unreadCount.set(userId, 0);
+        await chat.save();
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка отметки прочитанных:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
     }
 });

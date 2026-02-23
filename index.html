@@ -842,6 +842,33 @@
             color: #888;
             padding: 0 5px;
         }
+		
+		        /* Стили для счетчика непрочитанных */
+        .unread-badge {
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            min-width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            padding: 0 4px;
+            margin-left: 5px;
+            font-weight: bold;
+        }
+        
+        .chat-item .chat-name {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .chat-last-message.unread {
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -1382,6 +1409,7 @@
             
             let chatName = chat.name;
             let chatAvatar = '💬';
+            let unreadCount = chat.unreadCount || 0;
             
             if (chat.type === 'private') {
                 const otherParticipant = chat.participants.find(p => p._id !== currentUser._id);
@@ -1394,17 +1422,22 @@
             const lastMessage = chat.lastMessage || '';
             const lastMessageTime = chat.lastMessageTime ? new Date(chat.lastMessageTime).toLocaleTimeString().slice(0,5) : '';
             
+            // Формируем HTML для счетчика непрочитанных
+            const unreadBadge = unreadCount > 0 ? 
+                `<span style="background: #667eea; color: white; border-radius: 50%; min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; padding: 0 4px; margin-left: 5px;">${unreadCount}</span>` : '';
+            
             div.innerHTML = `
-                <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px;">
+                <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px; position: relative;">
                     ${chatAvatar}
                     ${chat.type === 'private' ? '<span class="online-indicator" style="background: ' + (getOnlineStatus(chat) ? '#4CAF50' : '#9e9e9e') + '"></span>' : ''}
                 </div>
                 <div class="chat-info" style="margin-left: 5px;">
-                    <div class="chat-name" style="font-size: 15px;">
+                    <div class="chat-name" style="font-size: 15px; display: flex; align-items: center;">
                         ${chatName}
-                        ${chat.isPinned ? '<span class="pin-icon">📌</span>' : ''}
+                        ${unreadBadge}
+                        ${chat.isPinned ? '<span class="pin-icon" style="margin-left: 5px;">📌</span>' : ''}
                     </div>
-                    <div class="chat-last-message" style="font-size: 12px; color: #888;">${lastMessage}</div>
+                    <div class="chat-last-message" style="font-size: 12px; color: #888; ${unreadCount > 0 ? 'font-weight: bold; color: #333;' : ''}">${lastMessage}</div>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: flex-end;">
                     <div class="chat-time" style="font-size: 10px; color: #999; margin-bottom: 5px;">${lastMessageTime}</div>
@@ -1438,6 +1471,31 @@
             
             updateChatHeader();
             await loadMessages(chat._id);
+            
+            // Отмечаем сообщения как прочитанные
+            await markChatAsRead(chat._id);
+        }
+        
+        // Новая функция для отметки чата как прочитанного
+        async function markChatAsRead(chatId) {
+            try {
+                const response = await fetchWithAuth(`${API_URL}/chats/${chatId}/read`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response && response.ok) {
+                    // Обновляем счетчик в текущем чате
+                    if (currentChat && currentChat._id === chatId) {
+                        currentChat.unreadCount = 0;
+                    }
+                    
+                    // Обновляем список чатов
+                    await loadChats();
+                }
+            } catch (err) {
+                console.error('Ошибка отметки прочитанных:', err);
+            }
         }
         
         function updateChatHeader() {
