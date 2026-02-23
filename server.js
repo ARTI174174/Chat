@@ -50,8 +50,19 @@ function authenticateToken(req, res, next) {
 // Подключение к MongoDB
 // ============================================
 
-// Helmet для безопасности заголовков
-app.use(helmet()); // ← НОВОЕ
+// Helmet для безопасности заголовков (с настройками для инлайн-скриптов)
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            scriptSrcAttr: ["'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'", "https://chat-jy2v.onrender.com"],
+        },
+    },
+}));
 
 // Rate limiting для всех запросов
 const limiter = rateLimit({ // ← НОВОЕ
