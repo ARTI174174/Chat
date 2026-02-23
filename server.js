@@ -143,27 +143,6 @@ const chatSchema = new mongoose.Schema({
     unreadCount: { type: Map, of: Number, default: {} }
 });
 
-// ========== НОВАЯ СХЕМА ==========
-// Схема прочитанных сообщений
-const readReceiptSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
-    chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true },
-    readAt: { type: Date, default: Date.now }
-});
-
-// Составной индекс для уникальности (пользователь + сообщение)
-readReceiptSchema.index({ userId: 1, messageId: 1 }, { unique: true });
-
-// Создание модели
-const User = mongoose.model('User', userSchema);
-const FriendRequest = mongoose.model('FriendRequest', friendRequestSchema);
-const Friend = mongoose.model('Friend', friendSchema);
-const Chat = mongoose.model('Chat', chatSchema);
-const Message = mongoose.model('Message', messageSchema);
-const PinnedChat = mongoose.model('PinnedChat', pinnedChatSchema);
-const ReadReceipt = mongoose.model('ReadReceipt', readReceiptSchema); // ← НОВОЕ
-
 // Схема сообщений
 const messageSchema = new mongoose.Schema({
     chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true },
@@ -179,6 +158,28 @@ const pinnedChatSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true }
 });
+
+// Схема прочитанных сообщений
+const readReceiptSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
+    chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true },
+    readAt: { type: Date, default: Date.now }
+});
+
+// Составной индекс для уникальности (пользователь + сообщение)
+readReceiptSchema.index({ userId: 1, messageId: 1 }, { unique: true });
+
+// ============================================
+// Создание моделей (ТОЛЬКО ОДИН РАЗ!)
+// ============================================
+const User = mongoose.model('User', userSchema);
+const FriendRequest = mongoose.model('FriendRequest', friendRequestSchema);
+const Friend = mongoose.model('Friend', friendSchema);
+const Chat = mongoose.model('Chat', chatSchema);
+const Message = mongoose.model('Message', messageSchema);
+const PinnedChat = mongoose.model('PinnedChat', pinnedChatSchema);
+const ReadReceipt = mongoose.model('ReadReceipt', readReceiptSchema);
 
 
 
