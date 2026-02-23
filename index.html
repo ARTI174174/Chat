@@ -1039,6 +1039,26 @@
                 <button class="btn" onclick="createGroup()">Создать группу</button>
             </div>
         </div>
+		        <!-- ========== НОВОЕ МОДАЛЬНОЕ ОКНО ========== -->
+        <!-- Модальное окно добавления участников в группу -->
+        <div class="modal" id="addMembersModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>➕ Добавить участников</h2>
+                    <span class="close-modal" onclick="closeModal('addMembersModal')">&times;</span>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3>Доступные друзья</h3>
+                    <div class="users-list" id="availableFriendsList" style="max-height: 300px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 10px; padding: 10px;"></div>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" style="flex: 1;" onclick="addSelectedMembers()">➕ Добавить выбранных</button>
+                    <button class="btn btn-secondary" style="flex: 1;" onclick="closeModal('addMembersModal')">Отмена</button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -1429,6 +1449,7 @@
             let chatName = currentChat.name;
             let chatAvatar = '💬';
             let chatStatus = '';
+            let actionButtons = '';
             
             if (currentChat.type === 'private') {
                 const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
@@ -1439,6 +1460,10 @@
                 }
             } else {
                 chatStatus = `${currentChat.participants.length} участников`;
+                actionButtons = `
+                    <button class="chat-action-btn" onclick="openAddMembersModal()" style="margin-right: 5px;">➕ Добавить</button>
+                    <button class="chat-action-btn" onclick="leaveGroupChat()">🚪 Покинуть</button>
+                `;
             }
             
             chatInfo.innerHTML = `
@@ -1449,7 +1474,22 @@
                 </div>
             `;
             
-            pinBtn.textContent = currentChat.isPinned ? '📌 Открепить' : '📌 Закрепить';
+            // Добавляем кнопки действий в заголовок
+            const chatActions = document.querySelector('.chat-actions');
+            if (chatActions) {
+                if (currentChat.type === 'group') {
+                    chatActions.innerHTML = `
+                        ${actionButtons}
+                        <button class="chat-action-btn" onclick="togglePinChat()" id="pinChatBtn">${currentChat.isPinned ? '📌 Открепить' : '📌 Закрепить'}</button>
+                        <button class="chat-action-btn" onclick="deleteCurrentChat()">🗑️ Удалить</button>
+                    `;
+                } else {
+                    chatActions.innerHTML = `
+                        <button class="chat-action-btn" onclick="togglePinChat()" id="pinChatBtn">${currentChat.isPinned ? '📌 Открепить' : '📌 Закрепить'}</button>
+                        <button class="chat-action-btn" onclick="deleteCurrentChat()">🗑️ Удалить</button>
+                    `;
+                }
+            }
         }
         
         function formatLastSeen(date) {
@@ -2191,6 +2231,156 @@
             document.getElementById('mainScreen').style.display = 'none';
         }
         
+		        
+        // ============================================
+        // Функции для групповых чатов
+        // ============================================
+        
+        // Открыть модальное окно добавления участников
+        async function openAddMembersModal() {
+            if (!currentChat || currentChat.type !== 'group') return;
+            
+            try {
+                const response = await fetchWithAuth(`${API_URL}/chats/${currentChat._id}/available-friends`);
+                if (!response) return;
+                
+                const availableFriends = await response.json();
+                displayAvailableFriends(availableFriends);
+                
+                document.getElementById('addMembersModal').classList.add('active');
+            } catch (err) {
+                console.error('Ошибка загрузки доступных друзей:', err);
+                showToast('Ошибка загрузки');
+            }
+        }
+        
+        // Отображение доступных друзей
+        function displayAvailableFriends(friends) {
+            const list = document.getElementById('availableFriendsList');
+            if (!list) return;
+            list.innerHTML = '';
+            
+            if (!friends || friends.length === 0) {
+                list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Нет доступных друзей для добавления</p>';
+                return;
+            }
+            
+            friends.forEach(friend => {
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.style.padding = '10px';
+                div.style.marginBottom = '5px';
+                div.style.cursor = 'pointer';
+                
+                div.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                        <div class="user-avatar" style="width: 40px; height: 40px; font-size: 20px; min-width: 40px;">
+                            ${friend.avatar || '😊'}
+                        </div>
+                        <div class="user-info" style="flex: 1;">
+                            <div class="user-name">${friend.firstName || ''} ${friend.lastName || ''} (${friend.username})</div>
+                        </div>
+                        <input type="checkbox" class="member-checkbox" data-userid="${friend._id}" style="width: 20px; height: 20px;">
+                    </div>
+                `;
+                
+                div.onclick = (e) => {
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = div.querySelector('.member-checkbox');
+                        checkbox.checked = !checkbox.checked;
+                    }
+                };
+                
+                list.appendChild(div);
+            });
+        }
+        
+        // Добавить выбранных участников
+        async function addSelectedMembers() {
+            const checkboxes = document.querySelectorAll('#availableFriendsList .member-checkbox:checked');
+            const selectedMembers = Array.from(checkboxes).map(cb => cb.dataset.userid);
+            
+            if (selectedMembers.length === 0) {
+                showToast('Выберите хотя бы одного участника');
+                return;
+            }
+            
+            try {
+                const response = await fetchWithAuth(`${API_URL}/chats/${currentChat._id}/add-members`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newMembers: selectedMembers })
+                });
+                
+                if (!response) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(`Добавлено ${data.addedMembers.length} участников`);
+                    closeModal('addMembersModal');
+                    
+                    // Обновляем информацию о чате
+                    await loadChats();
+                    if (currentChat) {
+                        const updatedChat = chats.find(c => c._id === currentChat._id);
+                        if (updatedChat) {
+                            currentChat = updatedChat;
+                            updateChatHeader();
+                            await loadMessages(currentChat._id);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Ошибка добавления участников:', err);
+                showToast('Ошибка');
+            }
+        }
+        
+        // Покинуть групповой чат
+        async function leaveGroupChat() {
+            if (!currentChat || currentChat.type !== 'group') return;
+            
+            if (!confirm('Вы уверены, что хотите покинуть этот чат?')) return;
+            
+            try {
+                const response = await fetchWithAuth(`${API_URL}/chats/${currentChat._id}/leave`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Вы покинули чат');
+                    
+                    if (data.chatDeleted) {
+                        showToast('Чат удален (не осталось участников)');
+                    }
+                    
+                    // Возвращаемся к списку чатов
+                    currentChat = null;
+                    document.getElementById('noChatSelected').style.display = 'flex';
+                    document.getElementById('chatHeader').style.display = 'none';
+                    document.getElementById('messageInputArea').style.display = 'none';
+                    document.getElementById('messagesContainer').innerHTML = '';
+                    
+                    await loadChats();
+                    
+                    // На мобильных устройствах показываем левую панель
+                    if (window.innerWidth <= 768) {
+                        document.getElementById('leftPanel').classList.remove('hidden');
+                        document.getElementById('rightPanel').classList.remove('active');
+                    }
+                }
+            } catch (err) {
+                console.error('Ошибка выхода из чата:', err);
+                showToast('Ошибка');
+            }
+        }
+		
         // Функции для контекстного меню
         function openChatMenu(chatId, event) {
             event.stopPropagation();

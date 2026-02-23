@@ -623,6 +623,158 @@ app.delete('/chats/:chatId', authenticateToken, async (req, res) => {
     }
 });
 
+// ========== ВСТАВЬТЕ СЮДА ==========
+// Добавление участников в групповой чат
+app.post('/chats/:chatId/add-members', authenticateToken, async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const { newMembers } = req.body; // массив ID новых участников
+        
+        // Находим чат
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ error: 'Чат не найден' });
+        }
+        
+        // Проверяем, что это групповой чат
+        if (chat.type !== 'group') {
+            return res.status(400).json({ error: 'Можно добавлять только в групповые чаты' });
+        }
+        
+        // Проверяем, что пользователь является участником чата
+        if (!chat.participants.includes(req.user.userId)) {
+            return res.status(403).json({ error: 'Вы не участник этого чата' });
+        }
+        
+        // Добавляем новых участников (избегаем дубликатов)
+        const existingParticipants = chat.participants.map(p => p.toString());
+        const uniqueNewMembers = newMembers.filter(id => !existingParticipants.includes(id));
+        
+        chat.participants.push(...uniqueNewMembers);
+        await chat.save();
+        
+        // Отправляем системное сообщение о новых участниках
+        if (uniqueNewMembers.length > 0) {
+            const users = await User.find({ _id: { $in: uniqueNewMembers } });
+            const names = users.map(u => u.username).join(', ');
+            
+            const systemMessage = new Message({
+                chatId,
+                senderId: req.user.userId,
+                senderName: 'Система',
+                text: `Добавлены участники: ${names}`,
+                encryptedText: `Добавлены участники: ${names}`
+            });
+            await systemMessage.save();
+            
+            // Обновляем время последнего сообщения
+            chat.lastMessage = `Добавлены участники: ${names}`;
+            chat.lastMessageTime = new Date();
+            await chat.save();
+        }
+        
+        res.json({ 
+            success: true, 
+            addedMembers: uniqueNewMembers 
+        });
+    } catch (err) {
+        console.error('Ошибка добавления участников:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Выход из группового чата
+app.post('/chats/:chatId/leave', authenticateToken, async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        
+        // Находим чат
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ error: 'Чат не найден' });
+        }
+        
+        // Проверяем, что это групповой чат
+        if (chat.type !== 'group') {
+            return res.status(400).json({ error: 'Нельзя выйти из личного чата' });
+        }
+        
+        // Проверяем, что пользователь является участником
+        if (!chat.participants.includes(req.user.userId)) {
+            return res.status(403).json({ error: 'Вы не участник этого чата' });
+        }
+        
+        // Удаляем пользователя из участников
+        chat.participants = chat.participants.filter(id => id.toString() !== req.user.userId);
+        
+        // Если участников не осталось - удаляем чат
+        if (chat.participants.length === 0) {
+            await Chat.findByIdAndDelete(chatId);
+            await Message.deleteMany({ chatId });
+            await PinnedChat.deleteMany({ chatId });
+            return res.json({ success: true, chatDeleted: true });
+        }
+        
+        await chat.save();
+        
+        // Отправляем системное сообщение о выходе
+        const user = await User.findById(req.user.userId);
+        const systemMessage = new Message({
+            chatId,
+            senderId: req.user.userId,
+            senderName: 'Система',
+            text: `Пользователь ${user.username} покинул чат`,
+            encryptedText: `Пользователь ${user.username} покинул чат`
+        });
+        await systemMessage.save();
+        
+        // Обновляем время последнего сообщения
+        chat.lastMessage = `Пользователь ${user.username} покинул чат`;
+        chat.lastMessageTime = new Date();
+        await chat.save();
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка выхода из чата:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Получение списка друзей, не участвующих в чате
+app.get('/chats/:chatId/available-friends', authenticateToken, async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        
+        // Находим чат
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ error: 'Чат не найден' });
+        }
+        
+        // Проверяем, что пользователь является участником
+        if (!chat.participants.includes(req.user.userId)) {
+            return res.status(403).json({ error: 'Вы не участник этого чата' });
+        }
+        
+        // Получаем всех друзей пользователя
+        const userFriends = await Friend.find({ userId: req.user.userId })
+            .populate('friendId', '_id username avatar firstName lastName');
+        
+        const friends = userFriends.map(f => f.friendId);
+        
+        // Фильтруем друзей, которые уже в чате
+        const availableFriends = friends.filter(friend => 
+            !chat.participants.some(p => p.toString() === friend._id.toString())
+        );
+        
+        res.json(availableFriends);
+    } catch (err) {
+        console.error('Ошибка получения доступных друзей:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+// ========== КОНЕЦ ВСТАВКИ ==========
+
 // ------------------------------
 // Сообщения
 // ------------------------------
