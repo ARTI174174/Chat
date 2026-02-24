@@ -1429,6 +1429,7 @@
                     
                     if (currentUser.privateKey) {
                         privateKeys[currentUser._id] = await importPrivateKey(currentUser.privateKey);
+						console.log('Ключ загружен для:', currentUser._id); // Для отладки
                     }
                     
                     showMainScreen();
@@ -1478,6 +1479,7 @@
                 for (const user of allUsers) {
                     if (user.publicKey) {
                         publicKeys[user._id] = await importPublicKey(user.publicKey);
+						console.log('Публичный ключ загружен для:', user.username); // Для отладки
                     }
                 }
                 
@@ -1962,29 +1964,30 @@ function debounce(func, wait) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
                 
-let messageText = '';
+let messageText = '🔒 Сообщение';
 
-// Для ВСЕХ сообщений пытаемся расшифровать
-if (msg.senderId._id === currentUser._id) {
-    // Свои сообщения - берем из памяти или расшифровываем
-    if (msg.encryptedText && privateKeys[currentUser._id]) {
-        try {
+// Проверяем, есть ли ключ для расшифровки
+if (privateKeys[currentUser._id]) {
+    try {
+        // Пытаемся расшифровать
+        if (msg.encryptedText) {
             messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-        } catch (e) {
-            console.error('Ошибка расшифровки:', e);
-            messageText = '🔒 Ошибка расшифровки';
+            console.log('Расшифровано:', messageText); // Для отладки
         }
-    }
-} else {
-    // Чужие сообщения - расшифровываем
-    if (msg.encryptedText && privateKeys[currentUser._id]) {
-        try {
-            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-        } catch (e) {
-            console.error('Ошибка расшифровки:', e);
+    } catch (e) {
+        console.error('Ошибка расшифровки:', e);
+        
+        // Если не получилось расшифровать, показываем заглушку
+        if (msg.senderId._id === currentUser._id) {
+            messageText = '🔒 Ошибка отправки';
+        } else {
             messageText = '🔒 Зашифрованное сообщение';
         }
     }
+} else {
+    console.log('Нет ключа для пользователя:', currentUser._id);
+    // Если ключа нет, показываем просто зашифрованное
+    messageText = '🔒 Зашифровано';
 }
                 
                 const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
