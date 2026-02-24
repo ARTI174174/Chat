@@ -2036,13 +2036,15 @@ try {
 if (currentChat.type === 'private') {
     const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
     
-    if (otherParticipant && publicKeys[otherParticipant._id] && publicKeys[currentUser._id]) {
+    if (otherParticipant && publicKeys[otherParticipant._id]) {
         // Шифруем для собеседника (его ключом)
         encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
-        
-        // Сохраняем в памяти свое сообщение в расшифрованном виде
-        // (не нужно шифровать для себя)
-        console.log('📝 Отправляем сообщение:', text);
+        console.log('📝 Текст сообщения:', text);
+        console.log('🔐 ЗАШИФРОВАНО, длина:', encryptedText.length);
+    } else {
+        console.log('❌ Нет публичного ключа для собеседника!');
+        showToast('Ошибка: нет ключа для шифрования');
+        return;
     }
 }
             
@@ -2732,35 +2734,88 @@ function searchChats() {
             );
         }
         
-        async function encryptMessage(message, publicKey) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(message);
-            const encrypted = await crypto.subtle.encrypt(
-                { name: "RSA-OAEP" },
-                publicKey,
-                data
-            );
-            return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+// ========== ПРАВИЛЬНЫЕ ФУНКЦИИ ПРЕОБРАЗОВАНИЯ ==========
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+function base64ToArrayBuffer(base64) {
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+// ========== КОНЕЦ ВСПОМОГАТЕЛЬНЫХ ФУНКЦИЙ ==========
+
+async function encryptMessage(message, publicKey) {
+    console.log('🔐 Начинаю шифрование...');
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    console.log('📏 Исходный текст, длина:', data.length);
+    
+    try {
+        const encrypted = await crypto.subtle.encrypt(
+            { name: "RSA-OAEP" },
+            publicKey,
+            data
+        );
+        console.log('✅ Зашифровано, длина ArrayBuffer:', encrypted.byteLength);
+        
+        const encryptedBase64 = arrayBufferToBase64(encrypted);
+        console.log('📏 Base64 длина:', encryptedBase64.length);
+        console.log('📝 Первые 50 символов:', encryptedBase64.substring(0, 50));
+        
+        return encryptedBase64;
+    } catch (e) {
+        console.error('❌ Ошибка шифрования:', e);
+        throw e;
+    }
+}
+
+async function decryptMessage(encryptedMessage, privateKey) {
+    console.log('🔓 Начинаю расшифровку...');
+    console.log('📏 Длина полученного текста:', encryptedMessage.length);
+    console.log('📝 Первые 50 символов:', encryptedMessage.substring(0, 50));
+    
+    try {
+        // Проверяем, что это валидный base64
+        if (!/^[A-Za-z0-9+/=]+$/.test(encryptedMessage)) {
+            console.error('❌ Строка содержит недопустимые символы для base64!');
+            return '🔒 Ошибка: поврежденные данные';
         }
         
-async function decryptMessage(encryptedMessage, privateKey) {
-    try {
-        // Декодируем из base64
-        const binary = Uint8Array.from(atob(encryptedMessage), c => c.charCodeAt(0));
+        // Конвертируем base64 в ArrayBuffer
+        const encryptedBuffer = base64ToArrayBuffer(encryptedMessage);
+        console.log('✅ ArrayBuffer получен, длина:', encryptedBuffer.byteLength);
         
         // Расшифровываем
         const decrypted = await crypto.subtle.decrypt(
             { name: "RSA-OAEP" },
             privateKey,
-            binary
+            encryptedBuffer
         );
+        console.log('✅ Расшифровка успешна, длина:', decrypted.byteLength);
         
         // Декодируем в текст
         const decoder = new TextDecoder();
-        return decoder.decode(decrypted);
+        const result = decoder.decode(decrypted);
+        console.log('📝 Расшифрованный текст:', result);
+        
+        return result;
     } catch (e) {
-        console.error('Ошибка в decryptMessage:', e);
-        throw e; // Пробрасываем ошибку выше
+        console.error('❌ Ошибка в decryptMessage:', e);
+        console.error('❌ Тип ошибки:', e.name);
+        console.error('❌ Сообщение:', e.message);
+        return '🔒 Ошибка: ' + e.message;
     }
 }
         
