@@ -642,117 +642,134 @@
         }
 
         /* ========== АДАПТИВНОСТЬ КАК В TELEGRAM ========== */
-        @media (max-width: 768px) {
-            body {
-                padding: 0;
-            }
-
-            #app {
-                height: 100vh;
-                border-radius: 0;
-                overflow: hidden;
-            }
-
-            .main-screen {
-                position: relative;
-                width: 100%;
-                height: 100%;
-                overflow: hidden;
-            }
-
-            .left-panel {
-                position: absolute;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                width: 100%;
-                z-index: 10;
-                background: white;
-                transform: translateX(0);
-                transition: transform 0.3s ease;
-                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            }
-
-            .left-panel.hidden {
-                transform: translateX(-100%);
-            }
-
-            .right-panel {
-                position: absolute;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                width: 100%;
-                z-index: 20;
-                background: white;
-                transform: translateX(100%);
-                transition: transform 0.3s ease;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .right-panel.active {
-                transform: translateX(0);
-            }
-
-            .mobile-back-btn {
-                display: flex !important;
-                background: none;
-                border: none;
-                font-size: 28px;
-                cursor: pointer;
-                color: #333;
-                margin-right: 15px;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .mobile-back-btn:hover {
-                background: rgba(0,0,0,0.05);
-            }
-
-            .chat-header {
-                padding: 12px 15px;
-                background: white;
-                border-bottom: 1px solid #f0f0f0;
-            }
-
-            .chat-header-info {
-                flex: 1;
-            }
-
-            .messages-container {
-                padding: 15px;
-            }
-
-            .message {
-                max-width: 85%;
-            }
-
-            .message-input-area {
-                padding: 10px;
-                background: white;
-                border-top: 1px solid #f0f0f0;
-            }
-
-            .message-input-area textarea {
-                font-size: 16px;
-                padding: 10px 15px;
-            }
-
-            .modal-content {
-                width: 95%;
-                padding: 20px;
-                max-height: 90vh;
-            }
-
-            #noChatSelected {
-                display: flex;
-            }
-        }
+@media (max-width: 768px) {
+    body {
+        padding: 0;
+    }
+    
+    #app {
+        height: 100vh;
+        border-radius: 0;
+        overflow: hidden;
+    }
+    
+    .main-screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    .left-panel {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        z-index: 10;
+        background: white;
+        transform: translateX(0);
+        transition: transform 0.3s ease;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    .left-panel.hidden {
+        transform: translateX(-100%);
+    }
+    
+    .right-panel {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        z-index: 20;
+        background: white;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .right-panel.active {
+        transform: translateX(0);
+    }
+    
+    .mobile-back-btn {
+        display: flex !important;
+        background: none;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        color: #333;
+        margin-right: 15px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .mobile-back-btn:hover {
+        background: rgba(0,0,0,0.05);
+    }
+    
+    .chat-header {
+        padding: 12px 15px;
+        background: white;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .chat-header-info {
+        flex: 1;
+    }
+    
+    .chat-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 5px;
+    }
+    
+    .chat-action-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    
+    .chat-action-btn[style*="background: #667eea"] {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+    
+    .messages-container {
+        padding: 15px;
+    }
+    
+    .message {
+        max-width: 85%;
+    }
+    
+    .message-input-area {
+        padding: 10px;
+        background: white;
+        border-top: 1px solid #f0f0f0;
+    }
+    
+    .message-input-area textarea {
+        font-size: 16px;
+        padding: 10px 15px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+        max-height: 90vh;
+    }
+    
+    #noChatSelected {
+        display: flex;
+    }
+}
 
         .mobile-back-btn {
             display: none;
@@ -1706,40 +1723,148 @@ function createChatItem(chat) {
             }
         }
         
-        // ========== НОВАЯ ФУНКЦИЯ ДЛЯ ПОИСКА В ЧАТЕ ==========
-        // Открыть поиск по чату
-        function openChatSearch() {
-            if (!currentChat) return;
-            
-            // Создаем модальное окно для поиска
-            const modal = document.createElement('div');
-            modal.className = 'modal active';
-            modal.id = 'chatSearchModal';
-            modal.style.display = 'flex';
-            
-            modal.innerHTML = `
-                <div class="modal-content" style="max-width: 500px;">
-                    <div class="modal-header">
-                        <h2>🔍 Поиск в чате</h2>
-                        <span class="close-modal" onclick="closeModal('chatSearchModal')">&times;</span>
-                    </div>
-                    <div class="form-group">
-                        <input type="text" id="chatSearchInput" placeholder="Введите текст для поиска..." style="padding: 12px;">
-                    </div>
-                    <div class="form-group">
-                        <button class="btn" onclick="searchInCurrentChat()" style="margin-bottom: 10px;">🔍 Найти</button>
-                    </div>
-                    <div id="chatSearchResults" style="max-height: 300px; overflow-y: auto;"></div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            // Автофокус на поле ввода
-            setTimeout(() => {
-                document.getElementById('chatSearchInput').focus();
-            }, 100);
+// ========== ФУНКЦИИ ПОИСКА В ЧАТЕ ==========
+
+// Открыть поиск по чату (выезжает сверху)
+function openChatSearch() {
+    if (!currentChat) return;
+    
+    // Проверяем, есть ли уже строка поиска
+    let searchBar = document.getElementById('chatSearchBar');
+    if (searchBar) {
+        searchBar.remove();
+        return;
+    }
+    
+    // Создаем строку поиска над сообщениями
+    searchBar = document.createElement('div');
+    searchBar.id = 'chatSearchBar';
+    searchBar.style.cssText = `
+        position: sticky;
+        top: 0;
+        background: white;
+        padding: 10px 15px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 100;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        animation: slideDown 0.2s ease;
+    `;
+    
+    searchBar.innerHTML = `
+        <button onclick="closeChatSearch()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #667eea; padding: 0 5px;">←</button>
+        <input type="text" id="chatSearchInput" placeholder="Поиск в чате..." style="flex: 1; padding: 8px 12px; border: 2px solid #667eea; border-radius: 20px; font-size: 14px; outline: none;">
+        <span id="searchCounter" style="color: #999; font-size: 13px;"></span>
+    `;
+    
+    // Вставляем перед messagesContainer
+    const messagesContainer = document.getElementById('messagesContainer');
+    messagesContainer.parentNode.insertBefore(searchBar, messagesContainer);
+    
+    // Добавляем стиль анимации
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
+    `;
+    document.head.appendChild(style);
+    
+    // Добавляем обработчик ввода
+    const input = document.getElementById('chatSearchInput');
+    input.addEventListener('input', debounce(() => searchInCurrentChatRealTime(), 300));
+    input.focus();
+    
+    // Сохраняем оригинальные сообщения
+    window.originalMessages = Array.from(document.querySelectorAll('.message')).map(msg => ({
+        element: msg,
+        html: msg.outerHTML,
+        text: msg.querySelector('.message-text')?.textContent.toLowerCase() || ''
+    }));
+}
+
+// Переключение поиска (открыть/закрыть)
+function toggleChatSearch() {
+    const searchBar = document.getElementById('chatSearchBar');
+    if (searchBar) {
+        closeChatSearch();
+    } else {
+        openChatSearch();
+    }
+}
+
+// Закрыть поиск
+function closeChatSearch() {
+    const searchBar = document.getElementById('chatSearchBar');
+    if (searchBar) searchBar.remove();
+    
+    // Восстанавливаем все сообщения
+    if (window.originalMessages) {
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = window.originalMessages.map(m => m.html).join('');
+        window.originalMessages = null;
+    }
+}
+
+// Поиск в реальном времени
+function searchInCurrentChatRealTime() {
+    const input = document.getElementById('chatSearchInput');
+    const query = input.value.trim().toLowerCase();
+    const counter = document.getElementById('searchCounter');
+    
+    if (!query) {
+        // Если пустой запрос - показываем все сообщения
+        if (window.originalMessages) {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = window.originalMessages.map(m => m.html).join('');
+        }
+        counter.textContent = '';
+        return;
+    }
+    
+    // Фильтруем сообщения
+    const container = document.getElementById('messagesContainer');
+    const messages = container.children;
+    let matchCount = 0;
+    
+    for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
+        const text = msg.querySelector('.message-text')?.textContent.toLowerCase() || '';
+        
+        if (text.includes(query)) {
+            msg.style.display = 'flex';
+            matchCount++;
+            
+            // Подсвечиваем найденный текст (темно-синим)
+            const msgText = msg.querySelector('.message-text');
+            if (msgText) {
+                const originalText = msgText.textContent;
+                const regex = new RegExp(`(${query})`, 'gi');
+                msgText.innerHTML = originalText.replace(regex, '<span style="background: #1e3a8a; color: white; padding: 2px 0; border-radius: 3px;">$1</span>');
+            }
+        } else {
+            msg.style.display = 'none';
+        }
+    }
+    
+    counter.textContent = matchCount > 0 ? `Найдено: ${matchCount}` : 'Ничего не найдено';
+}
+
+// Debounce для поиска
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
         
         // Поиск в текущем чате
         async function searchInCurrentChat() {
@@ -1934,115 +2059,46 @@ function createChatItem(chat) {
         let searchResults = [];
         let searchModal = null;
         
-        function searchChats() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            
-            // Если запрос пустой, просто фильтруем чаты по названию
-            if (!query) {
-                document.querySelectorAll('.chat-item').forEach(item => {
-                    item.style.display = 'flex';
-                });
-                return;
-            }
-            
-            // Сначала фильтруем чаты по названию
-            document.querySelectorAll('.chat-item').forEach(item => {
-                const name = item.querySelector('.chat-name').textContent.toLowerCase();
-                if (name.includes(query)) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-            
-            // Затем ищем по сообщениям
-            searchInMessages(query);
-        }
+function searchChats() {
+    const query = document.getElementById('searchInput').value.toLowerCase().trim();
+    
+    if (!query) {
+        // Если запрос пустой - показываем все чаты
+        updateChatsList(); // Перерисовываем список
+        return;
+    }
+    
+    // Фильтруем чаты по названию
+    const filteredChats = chats.filter(chat => {
+        let chatName = chat.name;
         
-        // Поиск по сообщениям
-        async function searchInMessages(query) {
-            if (!currentUser) return;
-            
-            try {
-                // Показываем индикатор загрузки
-                showToast('🔍 Поиск по сообщениям...');
-                
-                // Получаем все чаты пользователя
-                const chats = await fetchWithAuth(`${API_URL}/chats/${currentUser._id}`);
-                if (!chats) return;
-                
-                const userChats = await chats.json();
-                let results = [];
-                
-                // Для каждого чата ищем сообщения
-                for (const chat of userChats) {
-                    const messagesResponse = await fetchWithAuth(`${API_URL}/messages/${chat._id}`);
-                    if (!messagesResponse) continue;
-                    
-                    const messages = await messagesResponse.json();
-                    
-                    // Фильтруем сообщения по запросу
-                    const matchedMessages = messages.filter(msg => 
-                        msg.text.toLowerCase().includes(query) ||
-                        (msg.senderName && msg.senderName.toLowerCase().includes(query))
-                    );
-                    
-                    if (matchedMessages.length > 0) {
-                        results.push({
-                            chat,
-                            messages: matchedMessages
-                        });
-                    }
-                }
-                
-                // Показываем результаты
-                if (results.length > 0) {
-                    showSearchResults(results, query);
-                } else {
-                    showToast('Ничего не найдено');
-                }
-                
-            } catch (err) {
-                console.error('Ошибка поиска:', err);
-                showToast('Ошибка при поиске');
+        if (chat.type === 'private') {
+            const otherParticipant = chat.participants.find(p => p._id !== currentUser._id);
+            if (otherParticipant) {
+                chatName = `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username;
             }
         }
         
-        // Показать результаты поиска
-        function showSearchResults(results, query) {
-            // Создаем модальное окно для результатов
-            const modal = document.createElement('div');
-            modal.className = 'modal active';
-            modal.id = 'searchResultsModal';
-            modal.style.display = 'flex';
-            
-            modal.innerHTML = `
-                <div class="modal-content" style="max-width: 600px;">
-                    <div class="modal-header">
-                        <h2>🔍 Результаты поиска: "${query}"</h2>
-                        <span class="close-modal" onclick="closeModal('searchResultsModal')">&times;</span>
-                    </div>
-                    <div style="max-height: 400px; overflow-y: auto;">
-                        ${results.map(result => `
-                            <div style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #f0f0f0;">
-                                <h3 style="color: #667eea; cursor: pointer;" onclick="selectChatFromSearch('${result.chat._id}')">
-                                    ${result.chat.name || 'Личный чат'}
-                                </h3>
-                                ${result.messages.map(msg => `
-                                    <div style="padding: 5px 0; cursor: pointer;" onclick="jumpToMessage('${result.chat._id}', '${msg._id}')">
-                                        <span style="color: #888; font-size: 12px;">${msg.senderName || 'Неизвестно'}: </span>
-                                        <span style="color: #333;">${highlightText(msg.text, query)}</span>
-                                        <span style="color: #999; font-size: 10px; margin-left: 10px;">${new Date(msg.createdAt).toLocaleString()}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-        }
+        return chatName.toLowerCase().includes(query);
+    });
+    
+    // Перерисовываем список только с отфильтрованными чатами
+    const chatsList = document.getElementById('chatsList');
+    chatsList.innerHTML = '';
+    
+    if (filteredChats.length === 0) {
+        chatsList.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">Ничего не найдено</div>';
+        return;
+    }
+    
+    filteredChats.forEach(chat => {
+        const chatItem = createChatItem(chat);
+        chatsList.appendChild(chatItem);
+    });
+}
+        
+
+
         
         // Подсветка найденного текста
         function highlightText(text, query) {
@@ -2050,35 +2106,8 @@ function createChatItem(chat) {
             return text.replace(regex, '<span style="background: #ffeb3b; font-weight: bold;">$1</span>');
         }
         
-        // Выбор чата из результатов поиска
-        async function selectChatFromSearch(chatId) {
-            closeModal('searchResultsModal');
-            const chat = chats.find(c => c._id === chatId);
-            if (chat) {
-                await selectChat(chat);
-            }
-        }
-        
-        // Перейти к конкретному сообщению
-        async function jumpToMessage(chatId, messageId) {
-            closeModal('searchResultsModal');
-            const chat = chats.find(c => c._id === chatId);
-            if (chat) {
-                await selectChat(chat);
-                // Прокручиваем к сообщению и подсвечиваем его
-                setTimeout(() => {
-                    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-                    if (messageElement) {
-                        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        messageElement.style.backgroundColor = '#ffeb3b';
-                        setTimeout(() => {
-                            messageElement.style.backgroundColor = '';
-                        }, 2000);
-                    }
-                }, 500);
-            }
-        }
-        
+
+              
         function showLeftPanel() {
             document.getElementById('leftPanel').classList.remove('hidden');
             document.getElementById('rightPanel').classList.remove('active');
@@ -2341,7 +2370,7 @@ function createChatItem(chat) {
                         <div class="user-name">${friend.firstName || ''} ${friend.lastName || ''} (${friend.username})</div>
                         <div class="user-status" style="font-size: 11px;">${friend.isOnline ? 'онлайн' : 'офлайн'}</div>
                     </div>
-                    <button class="chat-action-btn" style="padding: 5px 10px;" onclick="event.stopPropagation(); startPrivateChat('${friend._id}')">💬</button>
+                    <button class="chat-action-btn" onclick="toggleChatSearch()" style="background: #667eea; color: white;">🔍 Поиск</button>
                 `;
                 
                 div.onclick = () => startPrivateChat(friend._id);
