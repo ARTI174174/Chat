@@ -1964,30 +1964,22 @@ function debounce(func, wait) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
                 
-let messageText = '🔒 Сообщение';
+let messageText = '';
 
-// Проверяем, есть ли ключ для расшифровки
-if (privateKeys[currentUser._id]) {
-    try {
-        // Пытаемся расшифровать
-        if (msg.encryptedText) {
-            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-            console.log('Расшифровано:', messageText); // Для отладки
-        }
-    } catch (e) {
-        console.error('Ошибка расшифровки:', e);
-        
-        // Если не получилось расшифровать, показываем заглушку
-        if (msg.senderId._id === currentUser._id) {
-            messageText = '🔒 Ошибка отправки';
-        } else {
-            messageText = '🔒 Зашифрованное сообщение';
-        }
+// Для своих сообщений или чужих - всегда пытаемся расшифровать
+try {
+    if (msg.encryptedText && privateKeys[currentUser._id]) {
+        // Расшифровываем сообщение
+        messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+    } else if (msg.text && msg.text !== '') {
+        // Если есть обычный текст (старые сообщения)
+        messageText = msg.text;
+    } else {
+        messageText = '🔒 Зашифровано';
     }
-} else {
-    console.log('Нет ключа для пользователя:', currentUser._id);
-    // Если ключа нет, показываем просто зашифрованное
-    messageText = '🔒 Зашифровано';
+} catch (e) {
+    console.error('Ошибка расшифровки:', e);
+    messageText = '🔒 Ошибка';
 }
                 
                 const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
@@ -2699,16 +2691,26 @@ function searchChats() {
             return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
         }
         
-        async function decryptMessage(encryptedMessage, privateKey) {
-            const binary = Uint8Array.from(atob(encryptedMessage), c => c.charCodeAt(0));
-            const decrypted = await crypto.subtle.decrypt(
-                { name: "RSA-OAEP" },
-                privateKey,
-                binary
-            );
-            const decoder = new TextDecoder();
-            return decoder.decode(decrypted);
-        }
+async function decryptMessage(encryptedMessage, privateKey) {
+    try {
+        // Декодируем из base64
+        const binary = Uint8Array.from(atob(encryptedMessage), c => c.charCodeAt(0));
+        
+        // Расшифровываем
+        const decrypted = await crypto.subtle.decrypt(
+            { name: "RSA-OAEP" },
+            privateKey,
+            binary
+        );
+        
+        // Декодируем в текст
+        const decoder = new TextDecoder();
+        return decoder.decode(decrypted);
+    } catch (e) {
+        console.error('Ошибка в decryptMessage:', e);
+        throw e; // Пробрасываем ошибку выше
+    }
+}
         
         // ============================================
         // Статусы онлайн
