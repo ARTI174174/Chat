@@ -1427,6 +1427,7 @@
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     localStorage.setItem('token', data.token); // ← СОХРАНЯЕМ ТОКЕН
                     
+console.log('🔍 ВЕСЬ currentUser:', JSON.stringify(currentUser));
 console.log('🔑 Проверка privateKey в currentUser:', currentUser.privateKey ? 'ЕСТЬ' : 'НЕТ');
 if (currentUser.privateKey) {
     console.log('📏 Длина ключа:', currentUser.privateKey.length);
