@@ -1429,7 +1429,7 @@
                     
                     if (currentUser.privateKey) {
                         privateKeys[currentUser._id] = await importPrivateKey(currentUser.privateKey);
-						console.log('Ключ загружен для:', currentUser._id); // Для отладки
+						console.log('✅ Публичный ключ загружен для:', user.username);
                     }
                     
                     showMainScreen();
@@ -1965,21 +1965,31 @@ function debounce(func, wait) {
                 messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
                 
 let messageText = '';
+console.log('--- СООБЩЕНИЕ ---');
+console.log('Отправитель:', msg.senderId.username);
+console.log('Текущий пользователь:', currentUser.username);
+console.log('Есть encryptedText?', msg.encryptedText ? 'ДА' : 'НЕТ');
+console.log('Есть приватный ключ?', privateKeys[currentUser._id] ? 'ДА' : 'НЕТ');
 
-// Для своих сообщений или чужих - всегда пытаемся расшифровать
+// Пробуем расшифровать
 try {
     if (msg.encryptedText && privateKeys[currentUser._id]) {
-        // Расшифровываем сообщение
+        console.log('Пытаюсь расшифровать...');
+        console.log('Длина зашифрованного:', msg.encryptedText.length);
+        
         messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+        
+        console.log('✅ УСПЕХ! Расшифровано:', messageText);
     } else if (msg.text && msg.text !== '') {
-        // Если есть обычный текст (старые сообщения)
+        console.log('Использую обычный текст:', msg.text);
         messageText = msg.text;
     } else {
+        console.log('❌ Нет данных для отображения');
         messageText = '🔒 Зашифровано';
     }
 } catch (e) {
-    console.error('Ошибка расшифровки:', e);
-    messageText = '🔒 Ошибка';
+    console.error('❌ ОШИБКА расшифровки:', e);
+    messageText = '🔒 Ошибка: ' + e.message;
 }
                 
                 const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
