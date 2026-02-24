@@ -938,6 +938,49 @@ app.post('/user/update', authenticateToken, async (req, res) => {
     }
 });
 
+// ========== НОВЫЙ МАРШРУТ ДЛЯ СМЕНЫ ПАРОЛЯ ==========
+// Смена пароля
+app.post('/user/change-password', authenticateToken, async (req, res) => {
+    try {
+        const { userId, currentPassword, newPassword } = req.body;
+        
+        // Проверяем, что пользователь меняет свой пароль
+        if (req.user.userId !== userId) {
+            return res.status(403).json({ error: 'Нет доступа' });
+        }
+        
+        // Проверка длины нового пароля
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'Новый пароль должен быть не менее 6 символов' });
+        }
+        
+        // Находим пользователя
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        // Проверяем текущий пароль
+        const validPassword = await bcrypt.compare(currentPassword, user.password);
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Неверный текущий пароль' });
+        }
+        
+        // Хешируем новый пароль
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        
+        // Обновляем пароль
+        user.password = hashedPassword;
+        await user.save();
+        
+        res.json({ success: true, message: 'Пароль успешно изменен' });
+    } catch (err) {
+        console.error('Ошибка смены пароля:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+// ========== КОНЕЦ НОВОГО МАРШРУТА ==========
+
 // Отметить сообщения как прочитанные
 app.post('/chats/:chatId/read', authenticateToken, async (req, res) => {
     try {
