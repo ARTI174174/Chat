@@ -1275,25 +1275,39 @@
             }
         }
         
-        function checkSavedSession() {
-            const savedUser = localStorage.getItem('currentUser');
-            const token = localStorage.getItem('token');
+function checkSavedSession() {
+    const savedUser = localStorage.getItem('currentUser');
+    const token = localStorage.getItem('token');
+    
+    if (savedUser && token) {
+        try {
+            currentUser = JSON.parse(savedUser);
             
-            if (savedUser && token) {
-                try {
-                    currentUser = JSON.parse(savedUser);
-                    showMainScreen();
-                    loadUserData();
-                } catch (e) {
-                    console.error('Ошибка загрузки сессии:', e);
-                    logout();
-                }
-            } else {
-                // Если нет токена или пользователя - очищаем
-                localStorage.removeItem('currentUser');
-                localStorage.removeItem('token');
+            // ===== ВАЖНО! Загружаем приватный ключ =====
+            if (currentUser.privateKey) {
+                console.log('🔑 Загружаем приватный ключ из localStorage');
+                importPrivateKey(currentUser.privateKey).then(key => {
+                    privateKeys[currentUser._id] = key;
+                    console.log('✅ Приватный ключ восстановлен для:', currentUser.username);
+                    console.log('🔑 privateKeys теперь:', Object.keys(privateKeys));
+                }).catch(e => {
+                    console.error('❌ Ошибка импорта ключа при загрузке:', e);
+                });
             }
+            // ===== КОНЕЦ =====
+            
+            showMainScreen();
+            loadUserData();
+        } catch (e) {
+            console.error('Ошибка загрузки сессии:', e);
+            logout();
         }
+    } else {
+        // Если нет токена или пользователя - очищаем
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('token');
+    }
+}
         
         async function register() {
             const username = document.getElementById('regUsername').value.trim();
