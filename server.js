@@ -78,22 +78,34 @@ app.use('/api/', limiter); // ← НОВОЕ
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 минут
     max: 5, // максимум 5 попыток
-    message: { error: 'Слишком много попыток входа. Подождите 15 минут' },
-    skipSuccessfulRequests: true, // НЕ считает успешные попытки
+    skipSuccessfulRequests: true, // не считаем успешные входы
     keyGenerator: (req) => {
-        // Используем IP + username для более точной блокировки
+        // Блокируем по комбинации IP + username
         return req.ip + '_' + (req.body.username || '').toLowerCase();
     },
     handler: (req, res) => {
-        // Кастомный обработчик с информацией о времени
         res.status(429).json({ 
             error: 'Слишком много попыток входа',
-            message: 'Подождите 15 минут перед следующей попыткой',
-            retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)
+            message: 'Подождите 15 минут перед следующей попыткой'
         });
     }
 });
 
+// ========== НОВЫЙ ЛИМИТЕР ДЛЯ РЕГИСТРАЦИИ ==========
+const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 час
+    max: 3, // максимум 3 регистрации с одного IP
+    message: { error: 'Слишком много попыток регистрации. Подождите 1 час' },
+    keyGenerator: (req) => {
+        return req.ip; // Блокируем по IP
+    },
+    handler: (req, res) => {
+        res.status(429).json({ 
+            error: 'Слишком много попыток регистрации',
+            message: 'Подождите 1 час перед следующей попыткой'
+        });
+    }
+});
 
 
 // ============================================
@@ -206,7 +218,7 @@ const ReadReceipt = mongoose.model('ReadReceipt', readReceiptSchema);
 // ------------------------------
 
 // Регистрация
-app.post('/register', async (req, res) => {
+app.post('/register', registerLimiter, async (req, res) => {
     try {
         let { username, password, publicKey, privateKey, avatar, firstName, lastName, bio } = req.body;
         
@@ -974,6 +986,7 @@ app.post('/user/change-password', authenticateToken, async (req, res) => {
         await user.save();
         
         res.json({ success: true, message: 'Пароль успешно изменен' });
+		
     } catch (err) {
         console.error('Ошибка смены пароля:', err);
         res.status(500).json({ error: 'Ошибка сервера' });

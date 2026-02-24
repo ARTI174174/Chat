@@ -912,26 +912,43 @@
                     <button class="btn" onclick="login()">Войти</button>
                 </div>
                 
-                <!-- Форма регистрации (с подтверждением пароля) -->
+                <!-- Форма регистрации (с защитой от ботов) -->
                 <div class="auth-form" id="registerForm">
+                    <!-- Скрытое поле-ловушка (боты его заполняют, люди - нет) -->
+                    <div style="display: none;">
+                        <input type="text" id="regHoneypot" value="">
+                    </div>
+                    
                     <div class="form-group">
                         <label>👤 Никнейм</label>
-                        <input type="text" id="regUsername" placeholder="Только английские буквы и цифры">
+                        <input type="text" id="regUsername" placeholder="Только английские буквы и цифры" required>
                         <small style="color: #666; font-size: 12px;">Только a-z, A-Z, 0-9 и _</small>
                     </div>
+                    
                     <div class="form-group" style="position: relative;">
                         <label>🔒 Пароль</label>
-                        <input type="password" id="regPassword" placeholder="Минимум 6 символов" style="padding-right: 40px;">
+                        <input type="password" id="regPassword" placeholder="Минимум 6 символов" style="padding-right: 40px;" required>
                         <span onclick="togglePassword('regPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
                     </div>
+                    
                     <div class="form-group" style="position: relative;">
                         <label>🔒 Подтвердите пароль</label>
-                        <input type="password" id="regConfirmPassword" placeholder="Повторите пароль" style="padding-right: 40px;">
+                        <input type="password" id="regConfirmPassword" placeholder="Повторите пароль" style="padding-right: 40px;" required>
                         <span onclick="togglePassword('regConfirmPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
                     </div>
+                    
+                    <!-- Простая математическая капча -->
+                    <div class="form-group" style="background: #f5f7fb; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                        <label>🤖 Подтвердите, что вы не робот</label>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                            <span id="captchaQuestion" style="font-size: 18px; font-weight: bold; background: white; padding: 8px 15px; border-radius: 5px; border: 1px solid #e0e0e0;">2 + 3 =</span>
+                            <input type="number" id="captchaAnswer" placeholder="?" style="width: 80px; text-align: center;" required>
+                        </div>
+                        <small style="color: #666; font-size: 12px;">Решите простой пример</small>
+                    </div>
+                    
                     <button class="btn" onclick="register()">Зарегистрироваться</button>
                 </div>
-
             </div>
         </div>
         
@@ -1192,6 +1209,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initAvatars();
             checkSavedSession();
+			generateNewCaptcha(); // ← ДОБАВЬТЕ ЭТУ СТРОКУ
         });
         
 		        // Функция для показа/скрытия пароля
@@ -1265,8 +1283,30 @@
             const password = document.getElementById('regPassword').value.trim();
             const confirmPassword = document.getElementById('regConfirmPassword').value.trim();
             
+            // ========== НОВЫЕ ПРОВЕРКИ ==========
+            // Проверка honeypot (скрытое поле - боты его заполняют)
+            const honeypot = document.getElementById('regHoneypot').value.trim();
+            if (honeypot !== '') {
+                console.log('Бот обнаружен');
+                showToast('Ошибка регистрации');
+                generateNewCaptcha(); // Генерируем новый пример
+                return; // Тихо отклоняем, не показывая настоящую ошибку
+            }
+            
+            // Проверка капчи
+            const captchaAnswer = document.getElementById('captchaAnswer').value.trim();
+            const expectedAnswer = window.currentCaptchaAnswer;
+            
+            if (!captchaAnswer || parseInt(captchaAnswer) !== expectedAnswer) {
+                showToast('Неправильный ответ на капчу');
+                generateNewCaptcha(); // Генерируем новый пример
+                return;
+            }
+            // ========== КОНЕЦ НОВЫХ ПРОВЕРОК ==========
+            
             if (!username || !password || !confirmPassword) {
                 showToast('Заполните все поля');
+                generateNewCaptcha();
                 return;
             }
             
@@ -1274,18 +1314,21 @@
             const englishRegex = /^[a-zA-Z0-9_]+$/;
             if (!englishRegex.test(username)) {
                 showToast('Логин может содержать только английские буквы, цифры и символ подчеркивания');
+                generateNewCaptcha();
                 return;
             }
             
             // Проверка длины пароля
             if (password.length < 6) {
                 showToast('Пароль должен быть не менее 6 символов');
+                generateNewCaptcha();
                 return;
             }
             
             // Проверка совпадения паролей
             if (password !== confirmPassword) {
                 showToast('Пароли не совпадают');
+                generateNewCaptcha();
                 return;
             }
             
@@ -1318,12 +1361,29 @@
                     document.getElementById('regUsername').value = '';
                     document.getElementById('regPassword').value = '';
                     document.getElementById('regConfirmPassword').value = '';
+                    document.getElementById('captchaAnswer').value = '';
+                    generateNewCaptcha(); // Генерируем новый пример
                 } else {
                     showToast(data.error || 'Ошибка регистрации');
+                    generateNewCaptcha();
                 }
             } catch (err) {
                 console.error('Ошибка регистрации:', err);
                 showToast('Ошибка сервера');
+                generateNewCaptcha();
+            }
+        }
+        
+        // ========== ДОБАВЬТЕ ЭТИ НОВЫЕ ФУНКЦИИ ПОСЛЕ register() ==========
+        // Генерация простой капчи
+        function generateNewCaptcha() {
+            const num1 = Math.floor(Math.random() * 5) + 2; // числа от 2 до 6
+            const num2 = Math.floor(Math.random() * 5) + 2;
+            window.currentCaptchaAnswer = num1 + num2;
+            
+            const captchaElement = document.getElementById('captchaQuestion');
+            if (captchaElement) {
+                captchaElement.textContent = `${num1} + ${num2} =`;
             }
         }
         
@@ -2166,6 +2226,7 @@ function createChatItem(chat) {
                         document.getElementById('profileCurrentPassword').value = '';
                         document.getElementById('profileNewPassword').value = '';
                         document.getElementById('profileConfirmPassword').value = '';
+						return; // ← ДОБАВЬТЕ ЭТУ СТРОКУ
                     } else {
                         showToast(passwordData.error || 'Ошибка при смене пароля');
                         return;
