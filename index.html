@@ -2050,27 +2050,27 @@ if (currentChat.type === 'private') {
                 
                 const data = await response.json();
                 
-if (data.success) {
-    input.value = '';
-    
-    // ===== ВРЕМЕННОЕ ОТОБРАЖЕНИЕ СВОЕГО СООБЩЕНИЯ =====
-    const tempDiv = document.createElement('div');
-    tempDiv.className = 'message own';
-    tempDiv.innerHTML = `
-        <div class="message-avatar">${currentUser.avatar || '😊'}</div>
-        <div class="message-content">
-            <div class="message-sender">Вы</div>
-            <div class="message-text">${text}</div>
-            <div class="message-time">только что</div>
-        </div>
-    `;
-    document.getElementById('messagesContainer').appendChild(tempDiv);
-    document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
-    // ===== КОНЕЦ ВРЕМЕННОГО ОТОБРАЖЕНИЯ =====
-    
-    await loadMessages(currentChat._id);
-    await loadChats();
-}
+                if (data.success) {
+                    input.value = '';
+                    
+                    // ===== ВРЕМЕННОЕ ОТОБРАЖЕНИЕ СВОЕГО СООБЩЕНИЯ =====
+                    const tempDiv = document.createElement('div');
+                    tempDiv.className = 'message own';
+                    tempDiv.innerHTML = `
+                        <div class="message-avatar">${currentUser.avatar || '😊'}</div>
+                        <div class="message-content">
+                            <div class="message-sender">Вы</div>
+                            <div class="message-text">${text}</div>
+                            <div class="message-time">только что</div>
+                        </div>
+                    `;
+                    document.getElementById('messagesContainer').appendChild(tempDiv);
+                    document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+                    // ===== КОНЕЦ ВРЕМЕННОГО ОТОБРАЖЕНИЯ =====
+                    
+                    await loadMessages(currentChat._id);
+                    await loadChats();
+                }
             } catch (err) {
                 console.error('Ошибка отправки:', err);
                 showToast('Ошибка отправки сообщения');
