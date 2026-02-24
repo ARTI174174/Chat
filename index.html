@@ -869,6 +869,18 @@
             font-weight: bold;
             color: #333;
         }
+		
+		        /* Стили для маленьких подсказок */
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+        }
+        
+        /* Стили для поля с глазком */
+        .form-group input[type="password"],
+        .form-group input[type="text"] {
+            padding-right: 40px;
+        }
     </style>
 </head>
 <body>
@@ -892,22 +904,30 @@
                         <label>Никнейм</label>
                         <input type="text" id="loginUsername" placeholder="Введите никнейм">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label>Пароль</label>
-                        <input type="password" id="loginPassword" placeholder="Введите пароль">
+                        <input type="password" id="loginPassword" placeholder="Введите пароль" style="padding-right: 40px;">
+                        <span onclick="togglePassword('loginPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
                     </div>
                     <button class="btn" onclick="login()">Войти</button>
                 </div>
                 
-                <!-- Форма регистрации (упрощенная) -->
+                <!-- Форма регистрации (с подтверждением пароля) -->
                 <div class="auth-form" id="registerForm">
                     <div class="form-group">
                         <label>👤 Никнейм</label>
-                        <input type="text" id="regUsername" placeholder="Придумайте никнейм">
+                        <input type="text" id="regUsername" placeholder="Только английские буквы и цифры">
+                        <small style="color: #666; font-size: 12px;">Только a-z, A-Z, 0-9 и _</small>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label>🔒 Пароль</label>
-                        <input type="password" id="regPassword" placeholder="Придумайте пароль">
+                        <input type="password" id="regPassword" placeholder="Минимум 6 символов" style="padding-right: 40px;">
+                        <span onclick="togglePassword('regPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
+                    </div>
+                    <div class="form-group" style="position: relative;">
+                        <label>🔒 Подтвердите пароль</label>
+                        <input type="password" id="regConfirmPassword" placeholder="Повторите пароль" style="padding-right: 40px;">
+                        <span onclick="togglePassword('regConfirmPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
                     </div>
                     <button class="btn" onclick="register()">Зарегистрироваться</button>
                 </div>
@@ -1149,6 +1169,18 @@
             checkSavedSession();
         });
         
+		        // Функция для показа/скрытия пароля
+        function togglePassword(inputId, element) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                element.textContent = '🔓';
+            } else {
+                input.type = 'password';
+                element.textContent = '👁️';
+            }
+        }
+		
         function initAvatars() {
             const profileAvatarSelector = document.getElementById('profileAvatarSelector');
             if (profileAvatarSelector) {
@@ -1206,9 +1238,29 @@
         async function register() {
             const username = document.getElementById('regUsername').value.trim();
             const password = document.getElementById('regPassword').value.trim();
+            const confirmPassword = document.getElementById('regConfirmPassword').value.trim();
             
-            if (!username || !password) {
-                showToast('Заполните никнейм и пароль');
+            if (!username || !password || !confirmPassword) {
+                showToast('Заполните все поля');
+                return;
+            }
+            
+            // Проверка на английские буквы
+            const englishRegex = /^[a-zA-Z0-9_]+$/;
+            if (!englishRegex.test(username)) {
+                showToast('Логин может содержать только английские буквы, цифры и символ подчеркивания');
+                return;
+            }
+            
+            // Проверка длины пароля
+            if (password.length < 6) {
+                showToast('Пароль должен быть не менее 6 символов');
+                return;
+            }
+            
+            // Проверка совпадения паролей
+            if (password !== confirmPassword) {
+                showToast('Пароли не совпадают');
                 return;
             }
             
@@ -1237,6 +1289,10 @@
                 if (data.success) {
                     showToast('Регистрация успешна! Теперь войдите');
                     switchAuthTab('login');
+                    // Очищаем поля
+                    document.getElementById('regUsername').value = '';
+                    document.getElementById('regPassword').value = '';
+                    document.getElementById('regConfirmPassword').value = '';
                 } else {
                     showToast(data.error || 'Ошибка регистрации');
                 }

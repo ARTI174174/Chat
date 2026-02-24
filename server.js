@@ -102,7 +102,8 @@ mongoose.connect(MONGODB_URI, {
 
 // Схема пользователя
 const userSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
+    username: { type: String, required: true }, // больше не unique
+    usernameLower: { type: String, required: true, unique: true }, // для поиска
     password: { type: String, required: true },
     publicKey: { type: String, required: true },
     privateKey: { type: String, required: true },
@@ -194,10 +195,27 @@ const ReadReceipt = mongoose.model('ReadReceipt', readReceiptSchema);
 // Регистрация
 app.post('/register', async (req, res) => {
     try {
-        const { username, password, publicKey, privateKey, avatar, firstName, lastName, bio } = req.body;
+        let { username, password, publicKey, privateKey, avatar, firstName, lastName, bio } = req.body;
         
-        // Проверка существования пользователя
-        const existingUser = await User.findOne({ username });
+        // Проверка на английские буквы (только a-z, A-Z, 0-9, _)
+        const englishRegex = /^[a-zA-Z0-9_]+$/;
+        if (!englishRegex.test(username)) {
+            return res.status(400).json({ error: 'Логин может содержать только английские буквы, цифры и символ подчеркивания' });
+        }
+        
+        // Проверка длины пароля
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Пароль должен быть не менее 6 символов' });
+        }
+        
+        // Сохраняем оригинальный логин как есть, но для поиска используем lowercase
+        const usernameLower = username.toLowerCase();
+        
+        // Проверка существования пользователя (регистронезависимо)
+        const existingUser = await User.findOne({ 
+            usernameLower: usernameLower 
+        });
+        
         if (existingUser) {
             return res.status(400).json({ error: 'Пользователь с таким ником уже существует' });
         }
@@ -205,9 +223,10 @@ app.post('/register', async (req, res) => {
         // Хеширование пароля
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Создание пользователя
+        // Создание пользователя с полем для lowercase логина
         const user = new User({
             username,
+            usernameLower, // ← новое поле для поиска
             password: hashedPassword,
             publicKey,
             privateKey,
@@ -239,10 +258,13 @@ app.post('/register', async (req, res) => {
 // Вход
 app.post('/login', loginLimiter, async (req, res) => {
     try {
-        const { username, password } = req.body;
+        let { username, password } = req.body;
         
-        // Поиск пользователя
-        const user = await User.findOne({ username });
+        // Приводим введенный логин к нижнему регистру для поиска
+        const usernameLower = username.toLowerCase();
+        
+        // Поиск пользователя по usernameLower
+        const user = await User.findOne({ usernameLower });
         if (!user) {
             return res.status(401).json({ error: 'Неверный логин или пароль' });
         }
