@@ -1254,13 +1254,13 @@
             }
         }
         
-function selectProfileAvatar(avatar, element) {
-    document.querySelectorAll('#profileAvatarSelector .avatar-option').forEach(opt => {
-        opt.classList.remove('selected');
-    });
-    element.classList.add('selected');
-    window.selectedProfileAvatar = avatar;
-}
+        function selectProfileAvatar(avatar) {
+            document.querySelectorAll('#profileAvatarSelector .avatar-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            window.selectedProfileAvatar = avatar;
+        }
         
         function switchAuthTab(tab) {
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -1275,39 +1275,25 @@ function selectProfileAvatar(avatar, element) {
             }
         }
         
-function checkSavedSession() {
-    const savedUser = localStorage.getItem('currentUser');
-    const token = localStorage.getItem('token');
-    
-    if (savedUser && token) {
-        try {
-            currentUser = JSON.parse(savedUser);
+        function checkSavedSession() {
+            const savedUser = localStorage.getItem('currentUser');
+            const token = localStorage.getItem('token');
             
-            // ===== ВАЖНО! Загружаем приватный ключ =====
-            if (currentUser.privateKey) {
-                console.log('🔑 Загружаем приватный ключ из localStorage');
-                importPrivateKey(currentUser.privateKey).then(key => {
-                    privateKeys[currentUser._id] = key;
-                    console.log('✅ Приватный ключ восстановлен для:', currentUser.username);
-                    console.log('🔑 privateKeys теперь:', Object.keys(privateKeys));
-                }).catch(e => {
-                    console.error('❌ Ошибка импорта ключа при загрузке:', e);
-                });
+            if (savedUser && token) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    showMainScreen();
+                    loadUserData();
+                } catch (e) {
+                    console.error('Ошибка загрузки сессии:', e);
+                    logout();
+                }
+            } else {
+                // Если нет токена или пользователя - очищаем
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('token');
             }
-            // ===== КОНЕЦ =====
-            
-            showMainScreen();
-            loadUserData();
-        } catch (e) {
-            console.error('Ошибка загрузки сессии:', e);
-            logout();
         }
-    } else {
-        // Если нет токена или пользователя - очищаем
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('token');
-    }
-}
         
         async function register() {
             const username = document.getElementById('regUsername').value.trim();
@@ -1441,20 +1427,9 @@ function checkSavedSession() {
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     localStorage.setItem('token', data.token); // ← СОХРАНЯЕМ ТОКЕН
                     
-console.log('🔍 ВЕСЬ currentUser:', JSON.stringify(currentUser));
-console.log('🔑 Проверка privateKey в currentUser:', currentUser.privateKey ? 'ЕСТЬ' : 'НЕТ');
-if (currentUser.privateKey) {
-    console.log('📏 Длина ключа:', currentUser.privateKey.length);
-    try {
-        privateKeys[currentUser._id] = await importPrivateKey(currentUser.privateKey);
-        console.log('✅ Приватный ключ ЗАГРУЖЕН для:', currentUser.username);
-        console.log('🔑 privateKeys после загрузки:', Object.keys(privateKeys));
-    } catch (e) {
-        console.error('❌ Ошибка импорта ключа:', e);
-    }
-} else {
-    console.log('❌ privateKey отсутствует в currentUser!');
-}
+                    if (currentUser.privateKey) {
+                        privateKeys[currentUser._id] = await importPrivateKey(currentUser.privateKey);
+                    }
                     
                     showMainScreen();
                     loadUserData();
@@ -1503,7 +1478,6 @@ if (currentUser.privateKey) {
                 for (const user of allUsers) {
                     if (user.publicKey) {
                         publicKeys[user._id] = await importPublicKey(user.publicKey);
-						console.log('Публичный ключ загружен для:', user.username); // Для отладки
                     }
                 }
                 
@@ -1653,11 +1627,9 @@ function createChatItem(chat) {
         
         async function selectChat(chat) {
             currentChat = chat;
-			
-			document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
-    element.classList.add('active');
             
-            
+            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
             
             document.getElementById('noChatSelected').style.display = 'none';
             document.getElementById('chatHeader').style.display = 'flex';
@@ -1990,54 +1962,25 @@ function debounce(func, wait) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
                 
-let messageText = '';
-console.log('--- СООБЩЕНИЕ ---');
-console.log('Отправитель:', msg.senderId.username);
-console.log('Текущий пользователь:', currentUser.username);
-console.log('Есть encryptedText?', msg.encryptedText ? 'ДА' : 'НЕТ');
-console.log('Есть приватный ключ?', privateKeys[currentUser._id] ? 'ДА' : 'НЕТ');
-
-// Пробуем расшифровать
-try {
-    if (msg.encryptedText && privateKeys[currentUser._id]) {
-        console.log('Пытаюсь расшифровать...');
-        console.log('Длина зашифрованного:', msg.encryptedText.length);
-        
-        // Проверяем, не свое ли это сообщение
-        if (msg.senderId._id === currentUser._id) {
-            // Это свое сообщение - показываем из временного хранилища или из text
-            console.log('📤 Свое сообщение');
-            if (msg.text && msg.text !== '') {
-                messageText = msg.text;
-            } else {
-                // Если нет текста, пробуем расшифровать (может не получиться)
-                try {
-                    messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-                } catch (e) {
-                    console.log('Не удалось расшифровать свое сообщение');
-                    messageText = '📤 Отправлено';
+                let messageText = msg.text;
+                
+                // Для личных чатов пытаемся расшифровать
+                if (currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
+                    try {
+                        const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
+                        if (otherParticipant && privateKeys[currentUser._id]) {
+                            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+                        }
+                    } catch (e) {
+                        console.error('Ошибка расшифровки:', e);
+                        messageText = '🔒 Зашифрованное сообщение';
+                    }
                 }
-            }
-        } else {
-            // Чужое сообщение - расшифровываем
-            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-            console.log('✅ УСПЕХ! Расшифровано чужое сообщение:', messageText);
-        }
-    } else if (msg.text && msg.text !== '') {
-        console.log('Использую обычный текст:', msg.text);
-        messageText = msg.text;
-    } else {
-        console.log('❌ Нет данных для отображения');
-        messageText = '🔒 Зашифровано';
-    }
-} catch (e) {
-    console.error('❌ ОШИБКА расшифровки:', e);
-    if (msg.senderId._id === currentUser._id) {
-        messageText = '📤 Отправлено';
-    } else {
-        messageText = '🔒 Ошибка: ' + e.message;
-    }
-}
+                
+                // Для групповых чатов показываем обычный текст
+                if (currentChat.type === 'group') {
+                    messageText = msg.text;
+                }
                 
                 const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
                 const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
@@ -2067,28 +2010,17 @@ try {
             
             if (!text || !currentChat) return;
             
-            let encryptedText = text;
-
-            // Для личных чатов - шифруем для собеседника
-if (currentChat.type === 'private') {
-    const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
-    
-    if (otherParticipant && publicKeys[otherParticipant._id]) {
-        // Шифруем для собеседника
-        encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
-        console.log('📝 Текст сообщения:', text);
-        console.log('🔐 ЗАШИФРОВАНО для собеседника, длина:', encryptedText.length);
-        
-        // СОХРАНЯЕМ СВОЕ СООБЩЕНИЕ В ПАМЯТИ ДЛЯ ОТОБРАЖЕНИЯ
-        // (временное решение - пока не придет с сервера)
-    } else {
-        console.log('❌ Нет публичного ключа для собеседника!');
-        showToast('Ошибка: нет ключа для шифрования');
-        return;
-    }
-}
-            
             try {
+                let encryptedText = text; // По умолчанию без шифрования
+                
+                // Для групповых чатов пока не шифруем (в разработке)
+                if (currentChat.type === 'private') {
+                    const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
+                    if (otherParticipant && publicKeys[otherParticipant._id]) {
+                        encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
+                    }
+                }
+                
                 const response = await fetchWithAuth(`${API_URL}/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2096,6 +2028,7 @@ if (currentChat.type === 'private') {
                         chatId: currentChat._id,
                         senderId: currentUser._id,
                         senderName: currentUser.username,
+                        text, // ← Отправляем обычный текст для групповых чатов
                         encryptedText
                     })
                 });
@@ -2106,22 +2039,6 @@ if (currentChat.type === 'private') {
                 
                 if (data.success) {
                     input.value = '';
-                    
-                    // ===== ВРЕМЕННОЕ ОТОБРАЖЕНИЕ СВОЕГО СООБЩЕНИЯ =====
-                    const tempDiv = document.createElement('div');
-                    tempDiv.className = 'message own';
-                    tempDiv.innerHTML = `
-                        <div class="message-avatar">${currentUser.avatar || '😊'}</div>
-                        <div class="message-content">
-                            <div class="message-sender">Вы</div>
-                            <div class="message-text">${text}</div>
-                            <div class="message-time">только что</div>
-                        </div>
-                    `;
-                    document.getElementById('messagesContainer').appendChild(tempDiv);
-                    document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
-                    // ===== КОНЕЦ ВРЕМЕННОГО ОТОБРАЖЕНИЯ =====
-                    
                     await loadMessages(currentChat._id);
                     await loadChats();
                 }
@@ -2573,16 +2490,6 @@ function searchChats() {
             }
         }
         
-		        // ===== НОВАЯ ФУНКЦИЯ ДЛЯ ПРОВЕРКИ =====
-        // Проверка данных пользователя
-        function checkUserData() {
-            console.log('👤 Текущий пользователь:', currentUser);
-            console.log('🔑 privateKey в объекте:', currentUser?.privateKey ? 'ЕСТЬ' : 'НЕТ');
-            console.log('🔑 privateKey длина:', currentUser?.privateKey?.length);
-            console.log('📦 localStorage:', localStorage.getItem('currentUser'));
-        }
-        // ===== КОНЕЦ НОВОЙ ФУНКЦИИ =====
-		
         async function acceptFriendRequest(requestId) {
             try {
                 const response = await fetchWithAuth(`${API_URL}/accept-friend`, {
@@ -2656,10 +2563,10 @@ function searchChats() {
             document.getElementById('createGroupModal').classList.add('active');
         }
         
-function toggleGroupMember(userId, element) {
-    const checkbox = element.querySelector('.group-member-checkbox');
-    checkbox.checked = !checkbox.checked;
-}
+        function toggleGroupMember(userId) {
+            const checkbox = event.currentTarget.querySelector('.group-member-checkbox');
+            checkbox.checked = !checkbox.checked;
+        }
         
         async function createGroup() {
             const name = document.getElementById('groupName').value.trim();
@@ -2774,90 +2681,27 @@ function toggleGroupMember(userId, element) {
             );
         }
         
-// ========== ПРАВИЛЬНЫЕ ФУНКЦИИ ПРЕОБРАЗОВАНИЯ ==========
-function arrayBufferToBase64(buffer) {
-    let binary = '';
-    const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-}
-
-function base64ToArrayBuffer(base64) {
-    const binary = atob(base64);
-    const len = binary.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes.buffer;
-}
-// ========== КОНЕЦ ВСПОМОГАТЕЛЬНЫХ ФУНКЦИЙ ==========
-
-async function encryptMessage(message, publicKey) {
-    console.log('🔐 Начинаю шифрование...');
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    console.log('📏 Исходный текст, длина:', data.length);
-    
-    try {
-        const encrypted = await crypto.subtle.encrypt(
-            { name: "RSA-OAEP" },
-            publicKey,
-            data
-        );
-        console.log('✅ Зашифровано, длина ArrayBuffer:', encrypted.byteLength);
-        
-        const encryptedBase64 = arrayBufferToBase64(encrypted);
-        console.log('📏 Base64 длина:', encryptedBase64.length);
-        console.log('📝 Первые 50 символов:', encryptedBase64.substring(0, 50));
-        
-        return encryptedBase64;
-    } catch (e) {
-        console.error('❌ Ошибка шифрования:', e);
-        throw e;
-    }
-}
-
-async function decryptMessage(encryptedMessage, privateKey) {
-    console.log('🔓 Начинаю расшифровку...');
-    console.log('📏 Длина полученного текста:', encryptedMessage.length);
-    console.log('📝 Первые 50 символов:', encryptedMessage.substring(0, 50));
-    
-    try {
-        // Проверяем, что это валидный base64
-        if (!/^[A-Za-z0-9+/=]+$/.test(encryptedMessage)) {
-            console.error('❌ Строка содержит недопустимые символы для base64!');
-            return '🔒 Ошибка: поврежденные данные';
+        async function encryptMessage(message, publicKey) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(message);
+            const encrypted = await crypto.subtle.encrypt(
+                { name: "RSA-OAEP" },
+                publicKey,
+                data
+            );
+            return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
         }
         
-        // Конвертируем base64 в ArrayBuffer
-        const encryptedBuffer = base64ToArrayBuffer(encryptedMessage);
-        console.log('✅ ArrayBuffer получен, длина:', encryptedBuffer.byteLength);
-        
-        // Расшифровываем
-        const decrypted = await crypto.subtle.decrypt(
-            { name: "RSA-OAEP" },
-            privateKey,
-            encryptedBuffer
-        );
-        console.log('✅ Расшифровка успешна, длина:', decrypted.byteLength);
-        
-        // Декодируем в текст
-        const decoder = new TextDecoder();
-        const result = decoder.decode(decrypted);
-        console.log('📝 Расшифрованный текст:', result);
-        
-        return result;
-    } catch (e) {
-        console.error('❌ Ошибка в decryptMessage:', e);
-        console.error('❌ Тип ошибки:', e.name);
-        console.error('❌ Сообщение:', e.message);
-        return '🔒 Ошибка: ' + e.message;
-    }
-}
+        async function decryptMessage(encryptedMessage, privateKey) {
+            const binary = Uint8Array.from(atob(encryptedMessage), c => c.charCodeAt(0));
+            const decrypted = await crypto.subtle.decrypt(
+                { name: "RSA-OAEP" },
+                privateKey,
+                binary
+            );
+            const decoder = new TextDecoder();
+            return decoder.decode(decrypted);
+        }
         
         // ============================================
         // Статусы онлайн

@@ -864,13 +864,13 @@ app.post('/messages', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'Вы не участник этого чата' });
         }
         
-const message = new Message({
-    chatId,
-    senderId,
-    senderName,
-    text: '', // ← Пустая строка, чтобы не хранить текст
-    encryptedText
-});
+        const message = new Message({
+            chatId,
+            senderId,
+            senderName,
+            text,
+            encryptedText
+        });
         
         await message.save();
         
