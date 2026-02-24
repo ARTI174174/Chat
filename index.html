@@ -2521,6 +2521,16 @@ function searchChats() {
             }
         }
         
+		        // ===== НОВАЯ ФУНКЦИЯ ДЛЯ ПРОВЕРКИ =====
+        // Проверка данных пользователя
+        function checkUserData() {
+            console.log('👤 Текущий пользователь:', currentUser);
+            console.log('🔑 privateKey в объекте:', currentUser?.privateKey ? 'ЕСТЬ' : 'НЕТ');
+            console.log('🔑 privateKey длина:', currentUser?.privateKey?.length);
+            console.log('📦 localStorage:', localStorage.getItem('currentUser'));
+        }
+        // ===== КОНЕЦ НОВОЙ ФУНКЦИИ =====
+		
         async function acceptFriendRequest(requestId) {
             try {
                 const response = await fetchWithAuth(`${API_URL}/accept-friend`, {
