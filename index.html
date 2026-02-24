@@ -1254,13 +1254,13 @@
             }
         }
         
-        function selectProfileAvatar(avatar) {
-            document.querySelectorAll('#profileAvatarSelector .avatar-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            event.target.classList.add('selected');
-            window.selectedProfileAvatar = avatar;
-        }
+function selectProfileAvatar(avatar, element) {
+    document.querySelectorAll('#profileAvatarSelector .avatar-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    element.classList.add('selected');
+    window.selectedProfileAvatar = avatar;
+}
         
         function switchAuthTab(tab) {
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -1653,9 +1653,11 @@ function createChatItem(chat) {
         
         async function selectChat(chat) {
             currentChat = chat;
+			
+			document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+    element.classList.add('active');
             
-            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            
             
             document.getElementById('noChatSelected').style.display = 'none';
             document.getElementById('chatHeader').style.display = 'flex';
@@ -2001,9 +2003,26 @@ try {
         console.log('Пытаюсь расшифровать...');
         console.log('Длина зашифрованного:', msg.encryptedText.length);
         
-        messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-        
-        console.log('✅ УСПЕХ! Расшифровано:', messageText);
+        // Проверяем, не свое ли это сообщение
+        if (msg.senderId._id === currentUser._id) {
+            // Это свое сообщение - показываем из временного хранилища или из text
+            console.log('📤 Свое сообщение');
+            if (msg.text && msg.text !== '') {
+                messageText = msg.text;
+            } else {
+                // Если нет текста, пробуем расшифровать (может не получиться)
+                try {
+                    messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+                } catch (e) {
+                    console.log('Не удалось расшифровать свое сообщение');
+                    messageText = '📤 Отправлено';
+                }
+            }
+        } else {
+            // Чужое сообщение - расшифровываем
+            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+            console.log('✅ УСПЕХ! Расшифровано чужое сообщение:', messageText);
+        }
     } else if (msg.text && msg.text !== '') {
         console.log('Использую обычный текст:', msg.text);
         messageText = msg.text;
@@ -2013,7 +2032,11 @@ try {
     }
 } catch (e) {
     console.error('❌ ОШИБКА расшифровки:', e);
-    messageText = '🔒 Ошибка: ' + e.message;
+    if (msg.senderId._id === currentUser._id) {
+        messageText = '📤 Отправлено';
+    } else {
+        messageText = '🔒 Ошибка: ' + e.message;
+    }
 }
                 
                 const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
@@ -2051,10 +2074,13 @@ if (currentChat.type === 'private') {
     const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
     
     if (otherParticipant && publicKeys[otherParticipant._id]) {
-        // Шифруем для собеседника (его ключом)
+        // Шифруем для собеседника
         encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
         console.log('📝 Текст сообщения:', text);
-        console.log('🔐 ЗАШИФРОВАНО, длина:', encryptedText.length);
+        console.log('🔐 ЗАШИФРОВАНО для собеседника, длина:', encryptedText.length);
+        
+        // СОХРАНЯЕМ СВОЕ СООБЩЕНИЕ В ПАМЯТИ ДЛЯ ОТОБРАЖЕНИЯ
+        // (временное решение - пока не придет с сервера)
     } else {
         console.log('❌ Нет публичного ключа для собеседника!');
         showToast('Ошибка: нет ключа для шифрования');
@@ -2630,10 +2656,10 @@ function searchChats() {
             document.getElementById('createGroupModal').classList.add('active');
         }
         
-        function toggleGroupMember(userId) {
-            const checkbox = event.currentTarget.querySelector('.group-member-checkbox');
-            checkbox.checked = !checkbox.checked;
-        }
+function toggleGroupMember(userId, element) {
+    const checkbox = element.querySelector('.group-member-checkbox');
+    checkbox.checked = !checkbox.checked;
+}
         
         async function createGroup() {
             const name = document.getElementById('groupName').value.trim();
