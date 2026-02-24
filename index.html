@@ -1962,25 +1962,30 @@ function debounce(func, wait) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
                 
-                let messageText = msg.text;
-                
-                // Для личных чатов пытаемся расшифровать
-                if (currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
-                    try {
-                        const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
-                        if (otherParticipant && privateKeys[currentUser._id]) {
-                            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-                        }
-                    } catch (e) {
-                        console.error('Ошибка расшифровки:', e);
-                        messageText = '🔒 Зашифрованное сообщение';
-                    }
-                }
-                
-                // Для групповых чатов показываем обычный текст
-                if (currentChat.type === 'group') {
-                    messageText = msg.text;
-                }
+let messageText = '';
+
+// Для ВСЕХ сообщений пытаемся расшифровать
+if (msg.senderId._id === currentUser._id) {
+    // Свои сообщения - берем из памяти или расшифровываем
+    if (msg.encryptedText && privateKeys[currentUser._id]) {
+        try {
+            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+        } catch (e) {
+            console.error('Ошибка расшифровки:', e);
+            messageText = '🔒 Ошибка расшифровки';
+        }
+    }
+} else {
+    // Чужие сообщения - расшифровываем
+    if (msg.encryptedText && privateKeys[currentUser._id]) {
+        try {
+            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+        } catch (e) {
+            console.error('Ошибка расшифровки:', e);
+            messageText = '🔒 Зашифрованное сообщение';
+        }
+    }
+}
                 
                 const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
                 const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
@@ -2028,7 +2033,6 @@ function debounce(func, wait) {
                         chatId: currentChat._id,
                         senderId: currentUser._id,
                         senderName: currentUser.username,
-                        text, // ← Отправляем обычный текст для групповых чатов
                         encryptedText
                     })
                 });
