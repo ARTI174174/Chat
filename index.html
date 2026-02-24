@@ -1427,9 +1427,18 @@
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     localStorage.setItem('token', data.token); // ← СОХРАНЯЕМ ТОКЕН
                     
+console.log('🔑 Проверка privateKey в currentUser:', currentUser.privateKey ? 'ЕСТЬ' : 'НЕТ');
 if (currentUser.privateKey) {
-    privateKeys[currentUser._id] = await importPrivateKey(currentUser.privateKey);
-    console.log('✅ Приватный ключ загружен для:', currentUser.username);
+    console.log('📏 Длина ключа:', currentUser.privateKey.length);
+    try {
+        privateKeys[currentUser._id] = await importPrivateKey(currentUser.privateKey);
+        console.log('✅ Приватный ключ ЗАГРУЖЕН для:', currentUser.username);
+        console.log('🔑 privateKeys после загрузки:', Object.keys(privateKeys));
+    } catch (e) {
+        console.error('❌ Ошибка импорта ключа:', e);
+    }
+} else {
+    console.log('❌ privateKey отсутствует в currentUser!');
 }
                     
                     showMainScreen();
