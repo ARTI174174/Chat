@@ -75,10 +75,23 @@ const limiter = rateLimit({ // ← НОВОЕ
 app.use('/api/', limiter); // ← НОВОЕ
 
 // Особо строгий лимит для входа
-const loginLimiter = rateLimit({ // ← НОВОЕ
-    windowMs: 15 * 60 * 1000,
-    max: 5, // только 5 попыток за 15 минут
-    message: { error: 'Слишком много попыток входа, попробуйте позже' }
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 минут
+    max: 5, // максимум 5 попыток
+    message: { error: 'Слишком много попыток входа. Подождите 15 минут' },
+    skipSuccessfulRequests: true, // НЕ считает успешные попытки
+    keyGenerator: (req) => {
+        // Используем IP + username для более точной блокировки
+        return req.ip + '_' + (req.body.username || '').toLowerCase();
+    },
+    handler: (req, res) => {
+        // Кастомный обработчик с информацией о времени
+        res.status(429).json({ 
+            error: 'Слишком много попыток входа',
+            message: 'Подождите 15 минут перед следующей попыткой',
+            retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)
+        });
+    }
 });
 
 
