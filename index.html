@@ -2020,21 +2020,19 @@ try {
             
             if (!text || !currentChat) return;
             
-let encryptedText = text;
+            let encryptedText = text;
 
-// Для личных чатов - шифруем для себя и для собеседника
-if (currentChat.type === 'private') {
-    const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
-    
-    if (otherParticipant && publicKeys[otherParticipant._id]) {
-        // Шифруем для собеседника (его ключом)
-        encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
-        
-        // Сохраняем в памяти свое сообщение (чтобы видеть его сразу)
-        // Не нужно шифровать для себя, просто покажем текст
-    }
-}
+            // Для личных чатов - шифруем для собеседника
+            if (currentChat.type === 'private') {
+                const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
                 
+                if (otherParticipant && publicKeys[otherParticipant._id]) {
+                    // Шифруем для собеседника (его ключом)
+                    encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
+                }
+            }
+            
+            try {
                 const response = await fetchWithAuth(`${API_URL}/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
