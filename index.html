@@ -927,6 +927,46 @@
         .form-group input[type="text"] {
             padding-right: 40px;
         }
+		        /* Стили для изображений в чате */
+        .chat-image {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .chat-image:hover {
+            transform: scale(1.02);
+        }
+        
+        /* Стили для аудио плеера */
+        .chat-audio {
+            width: 250px;
+            height: 40px;
+            border-radius: 20px;
+        }
+        
+        /* Модальное окно для просмотра изображения */
+        .image-viewer-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            cursor: pointer;
+        }
+        
+        .image-viewer-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -1049,8 +1089,20 @@
                 <div class="messages-container" id="messagesContainer"></div>
                 
                 <div class="message-input-area" id="messageInputArea" style="display: none;">
+                    <!-- Кнопка для выбора изображения -->
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+                    <button class="chat-action-btn" onclick="document.getElementById('imageInput').click()" style="background: #667eea; color: white; padding: 8px 12px;">📷</button>
+                    
+                    <!-- Кнопка для записи голоса -->
+                    <button class="chat-action-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()" style="background: #667eea; color: white; padding: 8px 12px;">🎤</button>
+                    
                     <textarea placeholder="Напишите сообщение..." id="messageInput" onkeypress="handleMessageKeyPress(event)"></textarea>
                     <button class="send-btn" onclick="sendMessage()">➤</button>
+                </div>
+                
+                <!-- Индикатор записи голоса (скрыт по умолчанию) -->
+                <div id="voiceRecordingIndicator" style="display: none; padding: 5px 10px; background: #ff6b6b; color: white; border-radius: 20px; margin: 5px; text-align: center;">
+                    🔴 Запись... <button onclick="stopVoiceRecording()" style="background: white; color: #ff6b6b; border: none; border-radius: 15px; padding: 2px 10px; margin-left: 10px;">Стоп</button>
                 </div>
                 
                 <div style="flex: 1; display: flex; justify-content: center; align-items: center; color: #999;" id="noChatSelected">
@@ -1977,41 +2029,67 @@ function debounce(func, wait) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
                 
-                let messageText = msg.text;
+                let messageContent = '';
+                let messageText = '';
                 
-                // Для личных чатов пытаемся расшифровать
-                if (currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
-                    try {
-                        const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
-                        if (otherParticipant && privateKeys[currentUser._id]) {
-                            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-                        }
-                    } catch (e) {
-                        console.error('Ошибка расшифровки:', e);
-                        messageText = '🔒 Зашифрованное сообщение';
-                    }
-                }
-                
-                // Для групповых чатов показываем обычный текст
-                if (currentChat.type === 'group') {
+                // Определяем тип сообщения и формируем содержимое
+                if (msg.type === 'image' && msg.fileUrl) {
+                    messageContent = `<img src="${msg.fileUrl}" class="chat-image" onclick="openImageViewer('${msg.fileUrl}')">`;
+                } else if (msg.type === 'audio' && msg.fileUrl) {
+                    messageContent = `<audio controls class="chat-audio" src="${msg.fileUrl}"></audio>`;
+                } else {
+                    // Текстовое сообщение (может быть зашифровано)
                     messageText = msg.text;
+                    
+                    // Для личных чатов пытаемся расшифровать
+                    if (currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
+                        try {
+                            if (privateKeys[currentUser._id]) {
+                                messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+                            }
+                        } catch (e) {
+                            console.error('Ошибка расшифровки:', e);
+                            messageText = '🔒 Зашифрованное сообщение';
+                        }
+                    }
+                    
+                    // Для групповых чатов показываем обычный текст
+                    if (currentChat.type === 'group') {
+                        messageText = msg.text;
+                    }
                 }
                 
                 const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
                 const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
                 
                 messageDiv.setAttribute('data-message-id', msg._id);
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
-                    <div class="message-content" style="position: relative;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div class="message-sender">${senderName}</div>
-                            <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                
+                // Формируем HTML
+                if (msg.type === 'image' || msg.type === 'audio') {
+                    messageDiv.innerHTML = `
+                        <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
+                        <div class="message-content" style="position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div class="message-sender">${senderName}</div>
+                                <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                            </div>
+                            ${messageContent}
+                            <div class="message-time">${time}</div>
                         </div>
-                        <div class="message-text">${messageText}</div>
-                        <div class="message-time">${time}</div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
+                        <div class="message-content" style="position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div class="message-sender">${senderName}</div>
+                                <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                            </div>
+                            <div class="message-text">${messageText}</div>
+                            <div class="message-time">${time}</div>
+                        </div>
+                    `;
+                }
                 
                 container.appendChild(messageDiv);
             }
@@ -3103,6 +3181,272 @@ function searchChats() {
                 });
             }
         });
+		        // ============================================
+        // Работа с изображениями и голосовыми сообщениями
+        // ============================================
+        
+        // Переменные для записи голоса
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingStartTime = null;
+        let recordingTimer = null;
+        
+        // Обработка выбора изображения
+        async function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Показываем индикатор загрузки
+            showToast('📷 Загрузка изображения...');
+            
+            try {
+                // Сжимаем изображение перед отправкой
+                const compressedFile = await compressImage(file);
+                
+                // Загружаем на сервер
+                const formData = new FormData();
+                formData.append('file', compressedFile);
+                
+                const response = await fetchWithAuth(`${API_URL}/api/upload`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {} // Не ставим Content-Type, FormData сам установит правильный
+                });
+                
+                if (!response) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Отправляем сообщение с изображением
+                    await sendFileMessage('image', data.url);
+                } else {
+                    showToast('Ошибка загрузки изображения');
+                }
+            } catch (err) {
+                console.error('Ошибка:', err);
+                showToast('Ошибка при загрузке изображения');
+            }
+            
+            // Очищаем input, чтобы можно было выбрать тот же файл снова
+            event.target.value = '';
+        }
+        
+        // Сжатие изображения
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        // Уменьшаем если слишком большое
+                        const maxSize = 1200;
+                        if (width > maxSize || height > maxSize) {
+                            if (width > height) {
+                                height = Math.round(height * maxSize / width);
+                                width = maxSize;
+                            } else {
+                                width = Math.round(width * maxSize / height);
+                                height = maxSize;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Конвертируем в blob с качеством 0.8
+                        canvas.toBlob((blob) => {
+                            // Создаем новый файл из blob
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        }, 'image/jpeg', 0.8);
+                    };
+                };
+                reader.onerror = reject;
+            });
+        }
+        
+        // Переменные для записи голоса
+        let isRecording = false;
+        
+        // Начать/остановить запись голоса
+        function toggleVoiceRecording() {
+            if (isRecording) {
+                stopVoiceRecording();
+            } else {
+                startVoiceRecording();
+            }
+        }
+        
+        // Начать запись голоса
+        async function startVoiceRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                recordingStartTime = Date.now();
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    // Останавливаем все треки
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // Создаем аудио файл
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const duration = (Date.now() - recordingStartTime) / 1000; // в секундах
+                    
+                    // Загружаем на сервер
+                    await uploadAudio(audioBlob, duration);
+                    
+                    // Скрываем индикатор
+                    document.getElementById('voiceRecordingIndicator').style.display = 'none';
+                    if (recordingTimer) clearInterval(recordingTimer);
+                    
+                    isRecording = false;
+                    document.getElementById('voiceRecordBtn').style.background = '#667eea';
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                // Показываем индикатор записи
+                document.getElementById('voiceRecordingIndicator').style.display = 'block';
+                document.getElementById('voiceRecordBtn').style.background = '#ff6b6b';
+                
+                // Таймер для обновления длительности (опционально)
+                recordingTimer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    document.getElementById('voiceRecordingIndicator').innerHTML = 
+                        `🔴 Запись... ${seconds}с <button onclick="stopVoiceRecording()" style="background: white; color: #ff6b6b; border: none; border-radius: 15px; padding: 2px 10px; margin-left: 10px;">Стоп</button>`;
+                }, 1000);
+                
+            } catch (err) {
+                console.error('Ошибка доступа к микрофону:', err);
+                showToast('Не удалось получить доступ к микрофону');
+            }
+        }
+        
+        // Остановить запись голоса
+        function stopVoiceRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+            }
+        }
+        
+        // Загрузка аудио на сервер
+        async function uploadAudio(audioBlob, duration) {
+            showToast('🎤 Загрузка голосового сообщения...');
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'voice.webm');
+                formData.append('duration', duration.toString());
+                
+                const response = await fetchWithAuth(`${API_URL}/api/upload`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {}
+                });
+                
+                if (!response) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    await sendFileMessage('audio', data.url, duration);
+                } else {
+                    showToast('Ошибка загрузки голосового сообщения');
+                }
+            } catch (err) {
+                console.error('Ошибка:', err);
+                showToast('Ошибка при загрузке голоса');
+            }
+        }
+        
+        // Отправка сообщения с файлом
+        async function sendFileMessage(type, fileUrl, duration = 0) {
+            if (!currentChat) return;
+            
+            try {
+                const response = await fetchWithAuth(`${API_URL}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chatId: currentChat._id,
+                        senderId: currentUser._id,
+                        senderName: currentUser.username,
+                        type: type,
+                        fileUrl: fileUrl,
+                        fileDuration: duration,
+                        text: '', // пустой текст для файлов
+                        encryptedText: '' // пустой для файлов
+                    })
+                });
+                
+                if (!response) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Временное отображение
+                    const tempDiv = document.createElement('div');
+                    tempDiv.className = 'message own';
+                    
+                    let contentHtml = '';
+                    if (type === 'image') {
+                        contentHtml = `<img src="${fileUrl}" class="chat-image" onclick="openImageViewer('${fileUrl}')">`;
+                    } else {
+                        contentHtml = `<audio controls class="chat-audio" src="${fileUrl}"></audio>`;
+                    }
+                    
+                    tempDiv.innerHTML = `
+                        <div class="message-avatar">${currentUser.avatar || '😊'}</div>
+                        <div class="message-content">
+                            <div class="message-sender">Вы</div>
+                            ${contentHtml}
+                            <div class="message-time">только что</div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('messagesContainer').appendChild(tempDiv);
+                    document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+                    
+                    await loadMessages(currentChat._id);
+                    await loadChats();
+                }
+            } catch (err) {
+                console.error('Ошибка отправки:', err);
+                showToast('Ошибка отправки сообщения');
+            }
+        }
+        
+        // Открыть просмотр изображения
+        function openImageViewer(imageUrl) {
+            const viewer = document.createElement('div');
+            viewer.className = 'image-viewer-modal';
+            viewer.onclick = () => viewer.remove();
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            
+            viewer.appendChild(img);
+            document.body.appendChild(viewer);
+        }
     </script>
 
 </body>

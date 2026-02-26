@@ -11,11 +11,34 @@ const jwt = require('jsonwebtoken');          // ← НОВОЕ
 const rateLimit = require('express-rate-limit'); // ← НОВОЕ
 const { v4: uuidv4 } = require('uuid');       // ← НОВОЕ
 const helmet = require('helmet');              // ← НОВОЕ
-
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
 const app = express();
 const PORT = process.env.PORT || 10000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ziganurov174_db_user:OABwcyu32hni3Tum@cluster0.y30awkl.mongodb.net/didi_messenger?retryWrites=true&w=majority';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-this-please-123!'; // ← НОВОЕ
+
+// Настройка Cloudinary
+cloudinary.config({
+    cloud_name: 'didigon',
+    api_key: '283934211791159',
+    api_secret: 'l5tvTltt3Lxhh0Bj4wd-vUE2Fp0'
+});
+
+// Настройка Multer для загрузки файлов (в память)
+const storage = multer.memoryStorage();
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB максимум
+    fileFilter: (req, file, cb) => {
+        // Разрешаем только изображения и аудио
+        if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('audio/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Можно загружать только изображения и аудио'), false);
+        }
+    }
+});
 
 // Middleware
 app.use(cors({
@@ -175,7 +198,10 @@ const messageSchema = new mongoose.Schema({
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     senderName: { type: String, required: true },
     text: { type: String, default: '' },
-    encryptedText: { type: String, required: true },
+    encryptedText: { type: String, default: '' },
+    type: { type: String, enum: ['text', 'image', 'audio'], default: 'text' },
+    fileUrl: { type: String, default: '' },
+    fileDuration: { type: Number, default: 0 }, // для аудио (длительность в секундах)
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -851,7 +877,7 @@ app.get('/chats/:chatId/available-friends', authenticateToken, async (req, res) 
 // Отправка сообщения
 app.post('/messages', authenticateToken, async (req, res) => {
     try {
-        const { chatId, senderId, senderName, text, encryptedText } = req.body;
+        const { chatId, senderId, senderName, text, encryptedText, type, fileUrl, fileDuration } = req.body;
         
         // Проверяем, что отправитель - текущий пользователь
         if (req.user.userId !== senderId) {
@@ -864,19 +890,41 @@ app.post('/messages', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'Вы не участник этого чата' });
         }
         
-        const message = new Message({
+        // Создаем сообщение
+        const messageData = {
             chatId,
             senderId,
             senderName,
-            text,
-            encryptedText
-        });
+            type: type || 'text'
+        };
         
+        // Для текстовых сообщений
+        if (type === 'text' || !type) {
+            messageData.text = text || '';
+            messageData.encryptedText = encryptedText || '';
+        } 
+        // Для изображений и аудио
+        else if (type === 'image' || type === 'audio') {
+            messageData.fileUrl = fileUrl;
+            if (fileDuration) {
+                messageData.fileDuration = fileDuration;
+            }
+            // Для обратной совместимости сохраняем текст как пустую строку
+            messageData.text = '';
+            messageData.encryptedText = '';
+        }
+        
+        const message = new Message(messageData);
         await message.save();
         
         // Обновление последнего сообщения в чате
+        let lastMessageText = '';
+        if (type === 'image') lastMessageText = '📷 Фото';
+        else if (type === 'audio') lastMessageText = '🎤 Голосовое сообщение';
+        else lastMessageText = text || '';
+        
         await Chat.findByIdAndUpdate(chatId, {
-            lastMessage: text,
+            lastMessage: lastMessageText,
             lastMessageTime: new Date()
         });
         
@@ -1068,6 +1116,56 @@ app.post('/user/status', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Ошибка обновления статуса:', err);
         res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Эндпоинт для загрузки файлов в Cloudinary
+app.post('/api/upload', authenticateToken, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Файл не загружен' });
+        }
+        
+        // Определяем папку в Cloudinary в зависимости от типа файла
+        let folder = 'chat_images';
+        let resourceType = 'image';
+        
+        if (req.file.mimetype.startsWith('audio/')) {
+            folder = 'chat_audio';
+            resourceType = 'video'; // Cloudinary использует 'video' для аудио
+        }
+        
+        // Загружаем файл в Cloudinary
+        const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: folder,
+                    resource_type: resourceType,
+                    format: req.file.mimetype.startsWith('audio/') ? 'mp3' : undefined, // конвертируем аудио в mp3
+                    transformation: req.file.mimetype.startsWith('image/') ? [
+                        { width: 1200, crop: 'limit' } // ограничиваем размер изображений
+                    ] : undefined
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            
+            // Передаем буфер в поток
+            uploadStream.end(req.file.buffer);
+        });
+        
+        // Возвращаем URL загруженного файла
+        res.json({ 
+            success: true, 
+            url: result.secure_url,
+            duration: req.body.duration ? parseFloat(req.body.duration) : 0 // длительность для аудио
+        });
+        
+    } catch (err) {
+        console.error('Ошибка загрузки файла:', err);
+        res.status(500).json({ error: 'Ошибка загрузки файла' });
     }
 });
 
