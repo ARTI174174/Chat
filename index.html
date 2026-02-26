@@ -1112,79 +1112,64 @@
         </div>
         
          <!-- Модальное окно профиля -->
+        <div class="modal" id="profileModal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2>Мой профиль</h2>
                     <span class="close-modal" onclick="closeModal('profileModal')">&times;</span>
                 </div>
-
-                <!-- Аватар и загрузка фото -->
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div id="profileAvatarPreview" style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; color: white; overflow: hidden;">
-                        <span id="profileAvatarEmoji">😊</span>
-                        <img id="profileAvatarImage" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
-                    </div>
-                    <input type="file" id="avatarUploadInput" accept="image/*" style="display: none;" onchange="handleAvatarUpload(event)">
-                    <button class="btn btn-secondary" onclick="document.getElementById('avatarUploadInput').click()" style="width: auto; padding: 8px 15px; font-size: 14px;">📸 Загрузить фото</button>
-                    <p style="font-size: 12px; color: #999; margin-top: 5px;">Рекомендуемый размер: 300x300</p>
-                </div>
-
-                <!-- Основные поля профиля -->
+                
                 <div class="form-group">
                     <label>Никнейм</label>
                     <input type="text" id="profileUsername" disabled>
                 </div>
-
+                
                 <div class="form-group">
                     <label>Имя</label>
                     <input type="text" id="profileFirstName" placeholder="Введите имя">
                 </div>
-
+                
                 <div class="form-group">
                     <label>Фамилия</label>
                     <input type="text" id="profileLastName" placeholder="Введите фамилию">
                 </div>
-
+                
                 <div class="form-group">
                     <label>О себе</label>
                     <textarea id="profileBio" placeholder="Расскажите о себе" rows="3"></textarea>
                 </div>
-
-                <!-- КНОПКА ДЛЯ СМЕНЫ ПАРОЛЯ (ТЕПЕРЬ ОНА ЗДЕСЬ) -->
-                <button class="btn btn-secondary" onclick="openChangePasswordModal()" style="margin-bottom: 20px;">🔐 Сменить пароль</button>
-
-                <!-- Кнопка сохранения -->
+                
+                <!-- ========== НОВЫЕ ПОЛЯ ДЛЯ ПАРОЛЯ ========== -->
+                <div style="margin: 20px 0; border-top: 1px solid #f0f0f0; padding-top: 20px;">
+                    <h3>Смена пароля</h3>
+                    
+                    <div class="form-group" style="position: relative;">
+                        <label>Текущий пароль</label>
+                        <input type="password" id="profileCurrentPassword" placeholder="Введите текущий пароль" style="padding-right: 40px;">
+                        <span onclick="togglePassword('profileCurrentPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
+                    </div>
+                    
+                    <div class="form-group" style="position: relative;">
+                        <label>Новый пароль</label>
+                        <input type="password" id="profileNewPassword" placeholder="Минимум 6 символов" style="padding-right: 40px;">
+                        <span onclick="togglePassword('profileNewPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
+                        <small style="color: #666; font-size: 12px;">Минимум 6 символов</small>
+                    </div>
+                    
+                    <div class="form-group" style="position: relative;">
+                        <label>Подтвердите новый пароль</label>
+                        <input type="password" id="profileConfirmPassword" placeholder="Повторите новый пароль" style="padding-right: 40px;">
+                        <span onclick="togglePassword('profileConfirmPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
+                    </div>
+                </div>
+                <!-- ========== КОНЕЦ НОВЫХ ПОЛЕЙ ========== -->
+                
+                <div class="form-group">
+                    <label>Аватар</label>
+                    <div class="avatar-selector" id="profileAvatarSelector"></div>
+                </div>
+                
                 <button class="btn" onclick="updateProfile()">Сохранить изменения</button>
-            </div>
-			
-			        <!-- Модальное окно смены пароля -->
-        <div class="modal" id="changePasswordModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>🔐 Смена пароля</h2>
-                    <span class="close-modal" onclick="closeModal('changePasswordModal')">&times;</span>
-                </div>
-
-                <div class="form-group" style="position: relative;">
-                    <label>Текущий пароль</label>
-                    <input type="password" id="changeCurrentPassword" placeholder="Введите текущий пароль" style="padding-right: 40px;">
-                    <span onclick="togglePassword('changeCurrentPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
-                </div>
-
-                <div class="form-group" style="position: relative;">
-                    <label>Новый пароль</label>
-                    <input type="password" id="changeNewPassword" placeholder="Минимум 6 символов" style="padding-right: 40px;">
-                    <span onclick="togglePassword('changeNewPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
-                    <small style="color: #666; font-size: 12px;">Минимум 6 символов</small>
-                </div>
-
-                <div class="form-group" style="position: relative;">
-                    <label>Подтвердите новый пароль</label>
-                    <input type="password" id="changeConfirmPassword" placeholder="Повторите новый пароль" style="padding-right: 40px;">
-                    <span onclick="togglePassword('changeConfirmPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
-                </div>
-
-                <button class="btn" onclick="submitChangePassword()">Изменить пароль</button>
             </div>
         </div>
         
@@ -1381,13 +1366,14 @@
             if (savedUser && token) {
                 try {
                     currentUser = JSON.parse(savedUser);
-                    showMainScreen(); // ← здесь НЕТ openProfileModal
+                    showMainScreen();
                     loadUserData();
                 } catch (e) {
                     console.error('Ошибка загрузки сессии:', e);
                     logout();
                 }
             } else {
+                // Если нет токена или пользователя - очищаем
                 localStorage.removeItem('currentUser');
                 localStorage.removeItem('token');
             }
@@ -2335,10 +2321,6 @@ function searchChats() {
             document.getElementById('profileFirstName').value = currentUser.firstName || '';
             document.getElementById('profileLastName').value = currentUser.lastName || '';
             document.getElementById('profileBio').value = currentUser.bio || '';
-
-            // Обновляем предпросмотр аватара
-            updateAvatarPreview();
-
             document.getElementById('profileModal').classList.add('active');
         }
         
@@ -2383,7 +2365,47 @@ function searchChats() {
                     document.getElementById('profileName').textContent = `${firstName} ${lastName}`.trim() || currentUser.username;
                 }
                 
-
+                // Если есть данные для смены пароля
+                if (currentPassword && newPassword && confirmPassword) {
+                    // Проверяем, что пароли совпадают
+                    if (newPassword !== confirmPassword) {
+                        showToast('Новые пароли не совпадают');
+                        return;
+                    }
+                    
+                    // Проверяем длину нового пароля
+                    if (newPassword.length < 6) {
+                        showToast('Новый пароль должен быть не менее 6 символов');
+                        return;
+                    }
+                    
+                    // Отправляем запрос на смену пароля
+                    const passwordResponse = await fetchWithAuth(`${API_URL}/user/change-password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: currentUser._id,
+                            currentPassword,
+                            newPassword
+                        })
+                    });
+                    
+                    if (!passwordResponse) return;
+                    
+                    const passwordData = await passwordResponse.json();
+                    
+                    if (passwordData.success) {
+                        showToast('Пароль успешно изменен');
+                        // Очищаем поля пароля
+                        document.getElementById('profileCurrentPassword').value = '';
+                        document.getElementById('profileNewPassword').value = '';
+                        document.getElementById('profileConfirmPassword').value = '';
+						return; // ← ДОБАВЬТЕ ЭТУ СТРОКУ
+                    } else {
+                        showToast(passwordData.error || 'Ошибка при смене пароля');
+                        return;
+                    }
+                }
                 
                 closeModal('profileModal');
                 showToast('Профиль обновлен');
@@ -3215,8 +3237,6 @@ function searchChats() {
         // Работа с изображениями и голосовыми сообщениями
         // ============================================
         
-		
-		
         // Переменные для записи голоса
         let mediaRecorder = null;
         let audioChunks = [];
@@ -3505,193 +3525,6 @@ async function uploadAudio(audioBlob, duration) {
             
             viewer.appendChild(img);
             document.body.appendChild(viewer);
-        }
-		
-		        // ============================================
-        // Загрузка аватара и смена пароля
-        // ============================================
-
-        // Предпросмотр аватара при открытии профиля
-        function updateAvatarPreview() {
-            const emojiSpan = document.getElementById('profileAvatarEmoji');
-            const imgTag = document.getElementById('profileAvatarImage');
-            if (currentUser.avatar && currentUser.avatar.startsWith('http')) {
-                // Если аватар - ссылка на картинку
-                imgTag.src = currentUser.avatar;
-                imgTag.style.display = 'block';
-                emojiSpan.style.display = 'none';
-            } else {
-                // Если аватар - эмодзи
-                emojiSpan.textContent = currentUser.avatar || '😊';
-                emojiSpan.style.display = 'block';
-                imgTag.style.display = 'none';
-            }
-        }
-
-        // Обработка загрузки аватара
-        async function handleAvatarUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const token = localStorage.getItem("token");
-            if (!token) {
-                showToast('Ты не авторизован');
-                return;
-            }
-
-            showToast('🖼️ Загрузка аватара...');
-
-            try {
-                // Сжимаем изображение перед отправкой
-                const compressedFile = await compressImage(file, 300);
-
-                const formData = new FormData();
-                formData.append("avatar", compressedFile);
-
-                const response = await fetch(`${API_URL}/api/upload-avatar`, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    console.error("Ошибка сервера:", data);
-                    showToast('Ошибка загрузки: ' + (data.error || 'Неизвестная ошибка'));
-                    return;
-                }
-
-                if (data.success) {
-                    // Обновляем данные пользователя
-                    currentUser.avatar = data.url;
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-                    // Обновляем отображение
-                    document.getElementById('profileAvatar').textContent = '';
-                    document.getElementById('profileAvatar').style.backgroundImage = `url(${data.url})`;
-                    document.getElementById('profileAvatar').style.backgroundSize = 'cover';
-                    document.getElementById('profileAvatar').style.backgroundPosition = 'center';
-
-                    updateAvatarPreview();
-                    showToast('✅ Аватар обновлен');
-
-                    // Обновляем список чатов, чтобы новый аватар появился везде
-                    await loadChats();
-                } else {
-                    showToast('Ошибка загрузки аватара');
-                }
-
-            } catch (error) {
-                console.error("Ошибка загрузки аватара:", error);
-                showToast('Ошибка при загрузке аватара');
-            }
-
-            event.target.value = '';
-        }
-
-        // Обновляем функцию compressImage, чтобы можно было задавать размер
-        // Замени старую функцию compressImage на эту улучшенную версию
-        function compressImage(file, maxSize = 1200) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-
-                        // Уменьшаем если слишком большое
-                        if (width > maxSize || height > maxSize) {
-                            if (width > height) {
-                                height = Math.round(height * maxSize / width);
-                                width = maxSize;
-                            } else {
-                                width = Math.round(width * maxSize / height);
-                                height = maxSize;
-                            }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        // Конвертируем в blob с качеством 0.8
-                        canvas.toBlob((blob) => {
-                            const compressedFile = new File([blob], file.name, {
-                                type: 'image/jpeg',
-                                lastModified: Date.now()
-                            });
-                            resolve(compressedFile);
-                        }, 'image/jpeg', 0.8);
-                    };
-                };
-                reader.onerror = reject;
-            });
-        }
-
-        // Функция для открытия модалки смены пароля
-        function openChangePasswordModal() {
-            // Очищаем поля
-            document.getElementById('changeCurrentPassword').value = '';
-            document.getElementById('changeNewPassword').value = '';
-            document.getElementById('changeConfirmPassword').value = '';
-            // Открываем модалку
-            document.getElementById('changePasswordModal').classList.add('active');
-        }
-
-        // Функция для отправки смены пароля
-        async function submitChangePassword() {
-            const currentPassword = document.getElementById('changeCurrentPassword').value.trim();
-            const newPassword = document.getElementById('changeNewPassword').value.trim();
-            const confirmPassword = document.getElementById('changeConfirmPassword').value.trim();
-
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                showToast('Заполните все поля');
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                showToast('Новый пароль должен быть не менее 6 символов');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                showToast('Новые пароли не совпадают');
-                return;
-            }
-
-            try {
-                const response = await fetchWithAuth(`${API_URL}/user/change-password`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUser._id,
-                        currentPassword,
-                        newPassword
-                    })
-                });
-
-                if (!response) return;
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showToast('✅ Пароль успешно изменен');
-                    closeModal('changePasswordModal');
-                } else {
-                    showToast(data.error || 'Ошибка при смене пароля');
-                }
-            } catch (err) {
-                console.error('Ошибка:', err);
-                showToast('Ошибка сервера');
-            }
         }
     </script>
 
