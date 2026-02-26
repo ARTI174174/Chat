@@ -1,2 +1,13 @@
 node server.js
 node monitor.js   http://localhost:3001
+
+
+cd C:\Users\Artem\Desktop\messenger
+git add server.js index.html    git add index.html
+git commit -m "Добавленазок"
+git push
+
+
+https://dashboard.render.com/web/srv-d686i8gboq4c73ct7e30/events    тут основа
+
+https://cloud.mongodb.com/v2/699078e3a82ff163f1143bc0#/explorer/699079a79ac14aa006f7c7f7/test/messages/find  тут масса
