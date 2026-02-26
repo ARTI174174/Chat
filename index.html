@@ -2015,84 +2015,134 @@ function debounce(func, wait) {
                 if (!response) return;
                 
                 const messages = await response.json();
-                displayMessages(messages);
+                
+                // Получаем текущие сообщения в DOM
+                const container = document.getElementById('messagesContainer');
+                const existingMessages = container.children;
+                
+                // Если сообщений еще нет - просто отображаем все
+                if (existingMessages.length === 0) {
+                    displayMessages(messages);
+                    return;
+                }
+                
+                // Получаем ID последнего загруженного сообщения
+                const lastMessageId = existingMessages[existingMessages.length - 1]?.dataset.messageId;
+                
+                // Находим новые сообщения (те, которых нет в DOM)
+                const newMessages = [];
+                let foundLast = false;
+                
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    const msg = messages[i];
+                    if (msg._id === lastMessageId) {
+                        foundLast = true;
+                        break;
+                    }
+                    if (!foundLast) {
+                        newMessages.unshift(msg);
+                    }
+                }
+                
+                // Если есть новые сообщения - добавляем их
+                if (newMessages.length > 0) {
+                    // Сохраняем текущую позицию скролла
+                    const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+                    
+                    // Добавляем только новые сообщения
+                    for (const msg of newMessages) {
+                        const messageDiv = await createMessageElement(msg);
+                        container.appendChild(messageDiv);
+                    }
+                    
+                    // Если был внизу - прокручиваем вниз
+                    if (wasAtBottom) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }
+                
             } catch (err) {
                 console.error('Ошибка загрузки сообщений:', err);
             }
         }
         
+		
+        // Функция для создания одного элемента сообщения
+        async function createMessageElement(msg) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
+            
+            let messageContent = '';
+            let messageText = '';
+            
+            // Определяем тип сообщения и формируем содержимое
+            if (msg.type === 'image' && msg.fileUrl) {
+                messageContent = `<img src="${msg.fileUrl}" class="chat-image" onclick="openImageViewer('${msg.fileUrl}')">`;
+            } else if (msg.type === 'audio' && msg.fileUrl) {
+                messageContent = `<audio controls class="chat-audio" src="${msg.fileUrl}"></audio>`;
+            } else {
+                // Текстовое сообщение (может быть зашифровано)
+                messageText = msg.text;
+                
+                // Для личных чатов пытаемся расшифровать
+                if (currentChat && currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
+                    try {
+                        if (privateKeys[currentUser._id] && msg.encryptedText) {
+                            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
+                        }
+                    } catch (e) {
+                        console.error('Ошибка расшифровки:', e);
+                        messageText = '🔒 Зашифрованное сообщение';
+                    }
+                }
+                
+                // Для групповых чатов показываем обычный текст
+                if (currentChat && currentChat.type === 'group') {
+                    messageText = msg.text;
+                }
+            }
+            
+            const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
+            const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
+            
+            messageDiv.setAttribute('data-message-id', msg._id);
+            
+            // Формируем HTML
+            if (msg.type === 'image' || msg.type === 'audio') {
+                messageDiv.innerHTML = `
+                    <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
+                    <div class="message-content" style="position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="message-sender">${senderName}</div>
+                            <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                        </div>
+                        ${messageContent}
+                        <div class="message-time">${time}</div>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
+                    <div class="message-content" style="position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="message-sender">${senderName}</div>
+                            <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                        </div>
+                        <div class="message-text">${messageText}</div>
+                        <div class="message-time">${time}</div>
+                    </div>
+                `;
+            }
+            
+            return messageDiv;
+        }
+		
         async function displayMessages(messages) {
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
             
             for (const msg of messages) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
-                
-                let messageContent = '';
-                let messageText = '';
-                
-                console.log('Сообщение:', msg); // для отладки
-                
-                // Определяем тип сообщения и формируем содержимое
-                if (msg.type === 'image' && msg.fileUrl) {
-                    messageContent = `<img src="${msg.fileUrl}" class="chat-image" onclick="openImageViewer('${msg.fileUrl}')">`;
-                } else if (msg.type === 'audio' && msg.fileUrl) {
-                    messageContent = `<audio controls class="chat-audio" src="${msg.fileUrl}"></audio>`;
-                } else {
-                    // Текстовое сообщение (может быть зашифровано)
-                    messageText = msg.text;
-                    
-                    // Для личных чатов пытаемся расшифровать
-                    if (currentChat && currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
-                        try {
-                            if (privateKeys[currentUser._id] && msg.encryptedText) {
-                                messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-                            }
-                        } catch (e) {
-                            console.error('Ошибка расшифровки:', e);
-                            messageText = '🔒 Зашифрованное сообщение';
-                        }
-                    }
-                    
-                    // Для групповых чатов показываем обычный текст
-                    if (currentChat && currentChat.type === 'group') {
-                        messageText = msg.text;
-                    }
-                }
-                
-                const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
-                const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
-                
-                messageDiv.setAttribute('data-message-id', msg._id);
-                
-                // Формируем HTML
-                if (msg.type === 'image' || msg.type === 'audio') {
-                    messageDiv.innerHTML = `
-                        <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
-                        <div class="message-content" style="position: relative;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div class="message-sender">${senderName}</div>
-                                <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
-                            </div>
-                            ${messageContent}
-                            <div class="message-time">${time}</div>
-                        </div>
-                    `;
-                } else {
-                    messageDiv.innerHTML = `
-                        <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
-                        <div class="message-content" style="position: relative;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div class="message-sender">${senderName}</div>
-                                <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
-                            </div>
-                            <div class="message-text">${messageText}</div>
-                            <div class="message-time">${time}</div>
-                        </div>
-                    `;
-                }
-                
+                const messageDiv = await createMessageElement(msg);
                 container.appendChild(messageDiv);
             }
             
