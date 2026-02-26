@@ -932,12 +932,15 @@
                     <button class="btn" onclick="login()">Войти</button>
                 </div>
                 
-                <!-- Форма регистрации (с защитой от ботов) -->
+ <!-- Форма регистрации (с защитой от ботов) -->
                 <div class="auth-form" id="registerForm">
-                    <!-- Скрытое поле-ловушка (боты его заполняют, люди - нет) -->
+                    <!-- Скрытое поле-ловушка -->
                     <div style="display: none;">
                         <input type="text" id="regHoneypot" value="">
                     </div>
+                    
+                    <!-- КНОПКА РЕГИСТРАЦИИ НАВЕРХУ -->
+                    <button class="btn" onclick="register()" style="margin-bottom: 20px;">Зарегистрироваться</button>
                     
                     <div class="form-group">
                         <label>👤 Никнейм</label>
@@ -967,7 +970,7 @@
                         <small style="color: #666; font-size: 12px;">Решите простой пример</small>
                     </div>
                     
-                    <button class="btn" onclick="register()">Зарегистрироваться</button>
+                    <!-- Кнопка внизу больше не нужна -->
                 </div>
             </div>
         </div>
@@ -1700,11 +1703,11 @@ function createChatItem(chat) {
                 </div>
             `;
             
-            // В заголовке теперь только три точки для меню
+            // Оставляем поиск, убираем закрепить и удалить
             const chatActions = document.querySelector('.chat-actions');
             if (chatActions) {
                 chatActions.innerHTML = `
-                    <button class="chat-menu-btn" onclick="event.stopPropagation(); openChatMenu('${currentChat._id}', event)" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #667eea; padding: 5px 10px;">⋮</button>
+                    <button class="chat-action-btn" onclick="openChatSearch()" style="background: #667eea; color: white;">🔍 Поиск</button>
                 `;
             }
         }
