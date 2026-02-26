@@ -21,7 +21,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-this-
 
 // Настройка Cloudinary
 cloudinary.config({
-    cloud_name: 'didigon',
+    cloud_name: 'dm6lwftjb',
     api_key: '283934211791159',
     api_secret: 'l5tvTltt3Lxhh0Bj4wd-vUE2Fp0'
 });
