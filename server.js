@@ -82,8 +82,9 @@ app.use(helmet({
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
             scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:", "blob:"],
-            connectSrc: ["'self'", "https://chat-jy2v.onrender.com"],
+            imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
+            mediaSrc: ["'self'", "https://res.cloudinary.com"],
+            connectSrc: ["'self'", "https://chat-jy2v.onrender.com", "https://res.cloudinary.com"],
         },
     },
 }));
