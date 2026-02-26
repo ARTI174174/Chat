@@ -2016,46 +2016,52 @@ function debounce(func, wait) {
                 
                 const messages = await response.json();
                 
-                // Получаем текущие сообщения в DOM
+                // Получаем контейнер и текущий чат
                 const container = document.getElementById('messagesContainer');
-                const existingMessages = container.children;
                 
-                // Если сообщений еще нет - просто отображаем все
-                if (existingMessages.length === 0) {
+                // ВАЖНО: Проверяем, не сменился ли чат за время загрузки
+                if (!currentChat || currentChat._id !== chatId) {
+                    return; // Чат уже сменили, не обновляем
+                }
+                
+                // Получаем ID первого сообщения в контейнере (если есть)
+                const firstMessage = container.firstChild;
+                const firstMessageId = firstMessage?.dataset.messageId;
+                
+                // Если это новый чат (нет сообщений или первый ID не совпадает)
+                if (!firstMessage || !messages.some(msg => msg._id === firstMessageId)) {
+                    // Просто отображаем все сообщения заново
                     displayMessages(messages);
                     return;
                 }
                 
-                // Получаем ID последнего загруженного сообщения
-                const lastMessageId = existingMessages[existingMessages.length - 1]?.dataset.messageId;
+                // Получаем ID последнего сообщения
+                const lastMessageId = container.lastChild?.dataset.messageId;
                 
-                // Находим новые сообщения (те, которых нет в DOM)
+                // Находим новые сообщения (те, которые идут после последнего)
                 const newMessages = [];
                 let foundLast = false;
                 
-                for (let i = messages.length - 1; i >= 0; i--) {
+                for (let i = 0; i < messages.length; i++) {
                     const msg = messages[i];
                     if (msg._id === lastMessageId) {
                         foundLast = true;
-                        break;
+                        continue;
                     }
-                    if (!foundLast) {
-                        newMessages.unshift(msg);
+                    if (foundLast) {
+                        newMessages.push(msg);
                     }
                 }
                 
                 // Если есть новые сообщения - добавляем их
                 if (newMessages.length > 0) {
-                    // Сохраняем текущую позицию скролла
                     const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
                     
-                    // Добавляем только новые сообщения
                     for (const msg of newMessages) {
                         const messageDiv = await createMessageElement(msg);
                         container.appendChild(messageDiv);
                     }
                     
-                    // Если был внизу - прокручиваем вниз
                     if (wasAtBottom) {
                         container.scrollTop = container.scrollHeight;
                     }
