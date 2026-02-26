@@ -1182,9 +1182,10 @@ app.get('/health', (req, res) => {
 app.use(express.static(__dirname));
 
 // Этот маршрут должен быть ПОСЛЕДНИМ!
-app.get('*', (req, res) => {
-    // Проверяем, не API ли это запрос
-    if (req.url.startsWith('/users/') || 
+app.use((req, res, next) => {
+    // Если это API запрос, но мы дошли до сюда - значит эндпоинт не найден
+    if (req.url.startsWith('/api/') || 
+        req.url.startsWith('/users/') || 
         req.url.startsWith('/friend-requests/') || 
         req.url.startsWith('/friends/') || 
         req.url.startsWith('/chats/') || 
@@ -1194,10 +1195,10 @@ app.get('*', (req, res) => {
         req.url.startsWith('/accept-friend') ||
         req.url.startsWith('/reject-friend') ||
         req.url.startsWith('/user/') ||
-        req.url.startsWith('/health') ||
-        req.url.startsWith('/api/upload')) {  // ← ДОБАВЬ ЭТУ СТРОКУ
+        req.url.startsWith('/health')) {
         return res.status(404).json({ error: 'API endpoint not found' });
     }
+    // Для всех остальных запросов отдаем HTML
     res.sendFile(__dirname + '/index.html');
 });
 
