@@ -89,6 +89,9 @@
 
         .auth-form {
             display: none;
+			max-height: 70vh;           /* ← ДОБАВИТЬ */
+            overflow-y: auto;            /* ← ДОБАВИТЬ */
+            padding-right: 10px;         /* ← ДОБАВИТЬ */
         }
 
         .auth-form.active {
@@ -1671,14 +1674,12 @@ function createChatItem(chat) {
         
         function updateChatHeader() {
             const chatInfo = document.getElementById('currentChatInfo');
-            const pinBtn = document.getElementById('pinChatBtn');
             
             if (!currentChat) return;
             
             let chatName = currentChat.name;
             let chatAvatar = '💬';
             let chatStatus = '';
-            let actionButtons = '';
             
             if (currentChat.type === 'private') {
                 const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
@@ -1689,10 +1690,6 @@ function createChatItem(chat) {
                 }
             } else {
                 chatStatus = `${currentChat.participants.length} участников`;
-                actionButtons = `
-                    <button class="chat-action-btn" onclick="openAddMembersModal()" style="margin-right: 5px;">➕ Добавить</button>
-                    <button class="chat-action-btn" onclick="leaveGroupChat()">🚪 Покинуть</button>
-                `;
             }
             
             chatInfo.innerHTML = `
@@ -1703,23 +1700,12 @@ function createChatItem(chat) {
                 </div>
             `;
             
-            // Добавляем кнопки действий в заголовок
+            // В заголовке теперь только три точки для меню
             const chatActions = document.querySelector('.chat-actions');
             if (chatActions) {
-                if (currentChat.type === 'group') {
-                    chatActions.innerHTML = `
-                        ${actionButtons}
-                        <button class="chat-action-btn" onclick="togglePinChat()" id="pinChatBtn">${currentChat.isPinned ? '📌 Открепить' : '📌 Закрепить'}</button>
-                        <button class="chat-action-btn" onclick="deleteCurrentChat()">🗑️ Удалить</button>
-                        <button class="chat-action-btn" onclick="openChatSearch()" style="background: #667eea; color: white;">🔍 Поиск в чате</button>
-                    `;
-                } else {
-                    chatActions.innerHTML = `
-                        <button class="chat-action-btn" onclick="togglePinChat()" id="pinChatBtn">${currentChat.isPinned ? '📌 Открепить' : '📌 Закрепить'}</button>
-                        <button class="chat-action-btn" onclick="deleteCurrentChat()">🗑️ Удалить</button>
-                        <button class="chat-action-btn" onclick="openChatSearch()" style="background: #667eea; color: white;">🔍 Поиск в чате</button>
-                    `;
-                }
+                chatActions.innerHTML = `
+                    <button class="chat-menu-btn" onclick="event.stopPropagation(); openChatMenu('${currentChat._id}', event)" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #667eea; padding: 5px 10px;">⋮</button>
+                `;
             }
         }
         
