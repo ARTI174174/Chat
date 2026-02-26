@@ -239,6 +239,55 @@ const ReadReceipt = mongoose.model('ReadReceipt', readReceiptSchema);
 // API Эндпоинты
 // ============================================
 
+// Эндпоинт для загрузки файлов в Cloudinary (В САМОМ НАЧАЛЕ!)
+app.post('/api/upload', authenticateToken, upload.single('file'), async (req, res) => {
+    console.log('🔥 /api/upload вызван!', req.file ? 'Файл есть' : 'Файла нет');
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Файл не загружен' });
+        }
+        
+        // Определяем папку в Cloudinary в зависимости от типа файла
+        let folder = 'chat_images';
+        let resourceType = 'image';
+        
+        if (req.file.mimetype.startsWith('audio/')) {
+            folder = 'chat_audio';
+            resourceType = 'video'; // Cloudinary использует 'video' для аудио
+        }
+        
+        // Загружаем файл в Cloudinary
+        const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: folder,
+                    resource_type: resourceType,
+                    format: req.file.mimetype.startsWith('audio/') ? 'mp3' : undefined,
+                    transformation: req.file.mimetype.startsWith('image/') ? [
+                        { width: 1200, crop: 'limit' }
+                    ] : undefined
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            
+            uploadStream.end(req.file.buffer);
+        });
+        
+        res.json({ 
+            success: true, 
+            url: result.secure_url,
+            duration: req.body.duration ? parseFloat(req.body.duration) : 0
+        });
+        
+    } catch (err) {
+        console.error('Ошибка загрузки файла:', err);
+        res.status(500).json({ error: 'Ошибка загрузки файла' });
+    }
+});
+
 // ------------------------------
 // Авторизация
 // ------------------------------
@@ -1119,56 +1168,8 @@ app.post('/user/status', authenticateToken, async (req, res) => {
     }
 });
 
-// Эндпоинт для загрузки файлов в Cloudinary
-app.post('/api/upload', authenticateToken, upload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Файл не загружен' });
-        }
-        
-        // Определяем папку в Cloudinary в зависимости от типа файла
-        let folder = 'chat_images';
-        let resourceType = 'image';
-        
-        if (req.file.mimetype.startsWith('audio/')) {
-            folder = 'chat_audio';
-            resourceType = 'video'; // Cloudinary использует 'video' для аудио
-        }
-        
-        // Загружаем файл в Cloudinary
-        const result = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-                {
-                    folder: folder,
-                    resource_type: resourceType,
-                    format: req.file.mimetype.startsWith('audio/') ? 'mp3' : undefined, // конвертируем аудио в mp3
-                    transformation: req.file.mimetype.startsWith('image/') ? [
-                        { width: 1200, crop: 'limit' } // ограничиваем размер изображений
-                    ] : undefined
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-            );
-            
-            // Передаем буфер в поток
-            uploadStream.end(req.file.buffer);
-        });
-        
-        // Возвращаем URL загруженного файла
-        res.json({ 
-            success: true, 
-            url: result.secure_url,
-            duration: req.body.duration ? parseFloat(req.body.duration) : 0 // длительность для аудио
-        });
-        
-    } catch (err) {
-        console.error('Ошибка загрузки файла:', err);
-        res.status(500).json({ error: 'Ошибка загрузки файла' });
-    }
-});
 
+        
 // ------------------------------
 // Здоровье сервера
 // ------------------------------
@@ -1184,20 +1185,10 @@ app.use(express.static(__dirname));
 // Этот маршрут должен быть ПОСЛЕДНИМ!
 app.use((req, res, next) => {
     // Если это API запрос, но мы дошли до сюда - значит эндпоинт не найден
-    if (req.url.startsWith('/api/') || 
-        req.url.startsWith('/users/') || 
-        req.url.startsWith('/friend-requests/') || 
-        req.url.startsWith('/friends/') || 
-        req.url.startsWith('/chats/') || 
-        req.url.startsWith('/messages/') ||
-        req.url.startsWith('/register') ||
-        req.url.startsWith('/login') ||
-        req.url.startsWith('/accept-friend') ||
-        req.url.startsWith('/reject-friend') ||
-        req.url.startsWith('/user/') ||
-        req.url.startsWith('/health')) {
+    if (req.url.startsWith('/api/')) {
         return res.status(404).json({ error: 'API endpoint not found' });
     }
+    
     // Для всех остальных запросов отдаем HTML
     res.sendFile(__dirname + '/index.html');
 });
