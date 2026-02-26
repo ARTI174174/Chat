@@ -1194,7 +1194,8 @@ app.get('*', (req, res) => {
         req.url.startsWith('/accept-friend') ||
         req.url.startsWith('/reject-friend') ||
         req.url.startsWith('/user/') ||
-        req.url.startsWith('/health')) {
+        req.url.startsWith('/health') ||
+        req.url.startsWith('/api/upload')) {  // ← ДОБАВЬ ЭТУ СТРОКУ
         return res.status(404).json({ error: 'API endpoint not found' });
     }
     res.sendFile(__dirname + '/index.html');
