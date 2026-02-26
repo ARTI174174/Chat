@@ -278,6 +278,54 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             uploadStream.end(req.file.buffer);
         });
         
+		// Эндпоинт для загрузки аватарок пользователей
+app.post('/api/upload-avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
+    console.log('🖼️ /api/upload-avatar вызван!', req.file ? 'Файл есть' : 'Файла нет');
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Файл не загружен' });
+        }
+
+        // Загружаем в папку avatars, сжимаем до квадрата 300x300
+        const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'avatars',
+                    transformation: [
+                        { width: 300, height: 300, crop: 'fill', gravity: 'face' },
+                        { quality: 'auto:low' }
+                    ]
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            uploadStream.end(req.file.buffer);
+        });
+
+        // Обновляем аватар у пользователя в базе
+        const user = await User.findByIdAndUpdate(
+            req.user.userId,
+            { avatar: result.secure_url },
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+
+        res.json({
+            success: true,
+            url: result.secure_url
+        });
+
+    } catch (err) {
+        console.error('Ошибка загрузки аватара:', err);
+        res.status(500).json({ error: 'Ошибка загрузки аватара' });
+    }
+});
+		
         res.json({ 
             success: true, 
             url: result.secure_url,
