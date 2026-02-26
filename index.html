@@ -46,9 +46,9 @@
         .auth-container {
             background: white;
             border-radius: 20px;
-            padding: 40px;
+            padding: 25px;  /* было 40px */
             width: 100%;
-            max-width: 400px;
+            max-width: 380px;  /* было 400px */
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
         }
 
@@ -58,9 +58,9 @@
         }
 
         .auth-header h1 {
-            font-size: 32px;
+            font-size: 28px;  /* было 32px */
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 5px;  /* было 10px */
         }
 
         .auth-tabs {
@@ -932,47 +932,46 @@
                     <button class="btn" onclick="login()">Войти</button>
                 </div>
                 
- <!-- Форма регистрации (с защитой от ботов) -->
+                <!-- Форма регистрации (с защитой от ботов) -->
                 <div class="auth-form" id="registerForm">
                     <!-- Скрытое поле-ловушка -->
                     <div style="display: none;">
                         <input type="text" id="regHoneypot" value="">
                     </div>
                     
-                    <!-- КНОПКА РЕГИСТРАЦИИ НАВЕРХУ -->
-                    <button class="btn" onclick="register()" style="margin-bottom: 20px;">Зарегистрироваться</button>
-                    
-                    <div class="form-group">
-                        <label>👤 Никнейм</label>
-                        <input type="text" id="regUsername" placeholder="Только английские буквы и цифры" required>
-                        <small style="color: #666; font-size: 12px;">Только a-z, A-Z, 0-9 и _</small>
-                    </div>
-                    
-                    <div class="form-group" style="position: relative;">
-                        <label>🔒 Пароль</label>
-                        <input type="password" id="regPassword" placeholder="Минимум 6 символов" style="padding-right: 40px;" required>
-                        <span onclick="togglePassword('regPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
-                    </div>
-                    
-                    <div class="form-group" style="position: relative;">
-                        <label>🔒 Подтвердите пароль</label>
-                        <input type="password" id="regConfirmPassword" placeholder="Повторите пароль" style="padding-right: 40px;" required>
-                        <span onclick="togglePassword('regConfirmPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
-                    </div>
-                    
-                    <!-- Простая математическая капча -->
-                    <div class="form-group" style="background: #f5f7fb; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <label>🤖 Подтвердите, что вы не робот</label>
-                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-                            <span id="captchaQuestion" style="font-size: 18px; font-weight: bold; background: white; padding: 8px 15px; border-radius: 5px; border: 1px solid #e0e0e0;">2 + 3 =</span>
-                            <input type="number" id="captchaAnswer" placeholder="?" style="width: 80px; text-align: center;" required>
+                    <!-- Компактная форма -->
+                    <div style="font-size: 14px;">
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label style="font-size: 13px; margin-bottom: 2px;">👤 Никнейм</label>
+                            <input type="text" id="regUsername" placeholder="Только англ. буквы и цифры" required style="padding: 8px; font-size: 14px;">
+                            <small style="color: #666; font-size: 11px;">Только a-z, A-Z, 0-9 и _</small>
                         </div>
-                        <small style="color: #666; font-size: 12px;">Решите простой пример</small>
+                        
+                        <div class="form-group" style="position: relative; margin-bottom: 10px;">
+                            <label style="font-size: 13px; margin-bottom: 2px;">🔒 Пароль</label>
+                            <input type="password" id="regPassword" placeholder="Минимум 6 символов" style="padding-right: 40px; padding: 8px; font-size: 14px;" required>
+                            <span onclick="togglePassword('regPassword', this)" style="position: absolute; right: 10px; top: 28px; cursor: pointer; color: #666; font-size: 14px;">👁️</span>
+                        </div>
+                        
+                        <div class="form-group" style="position: relative; margin-bottom: 10px;">
+                            <label style="font-size: 13px; margin-bottom: 2px;">🔒 Подтвердите пароль</label>
+                            <input type="password" id="regConfirmPassword" placeholder="Повторите пароль" style="padding-right: 40px; padding: 8px; font-size: 14px;" required>
+                            <span onclick="togglePassword('regConfirmPassword', this)" style="position: absolute; right: 10px; top: 28px; cursor: pointer; color: #666; font-size: 14px;">👁️</span>
+                        </div>
+                        
+                        <!-- Капча компактная -->
+                        <div class="form-group" style="background: #f5f7fb; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                            <label style="font-size: 13px; margin-bottom: 2px;">🤖 Подтвердите, что вы не робот</label>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
+                                <span id="captchaQuestion" style="font-size: 16px; font-weight: bold; background: white; padding: 5px 10px; border-radius: 5px; border: 1px solid #e0e0e0;">2 + 3 =</span>
+                                <input type="number" id="captchaAnswer" placeholder="?" style="width: 60px; text-align: center; padding: 5px; font-size: 14px;" required>
+                            </div>
+                            <small style="color: #666; font-size: 11px;">Решите простой пример</small>
+                        </div>
+                        
+                        <button class="btn" onclick="register()" style="padding: 10px; font-size: 15px;">Зарегистрироваться</button>
                     </div>
-                    
-                    <!-- Кнопка внизу больше не нужна -->
                 </div>
-            </div>
         </div>
         
         <!-- Основной экран -->
