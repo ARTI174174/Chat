@@ -1381,14 +1381,13 @@
             if (savedUser && token) {
                 try {
                     currentUser = JSON.parse(savedUser);
-                    showMainScreen();
+                    showMainScreen(); // ← здесь НЕТ openProfileModal
                     loadUserData();
                 } catch (e) {
                     console.error('Ошибка загрузки сессии:', e);
                     logout();
                 }
             } else {
-                // Если нет токена или пользователя - очищаем
                 localStorage.removeItem('currentUser');
                 localStorage.removeItem('token');
             }
