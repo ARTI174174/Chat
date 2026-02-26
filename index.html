@@ -2032,6 +2032,8 @@ function debounce(func, wait) {
                 let messageContent = '';
                 let messageText = '';
                 
+                console.log('Сообщение:', msg); // для отладки
+                
                 // Определяем тип сообщения и формируем содержимое
                 if (msg.type === 'image' && msg.fileUrl) {
                     messageContent = `<img src="${msg.fileUrl}" class="chat-image" onclick="openImageViewer('${msg.fileUrl}')">`;
@@ -2042,9 +2044,9 @@ function debounce(func, wait) {
                     messageText = msg.text;
                     
                     // Для личных чатов пытаемся расшифровать
-                    if (currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
+                    if (currentChat && currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
                         try {
-                            if (privateKeys[currentUser._id]) {
+                            if (privateKeys[currentUser._id] && msg.encryptedText) {
                                 messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
                             }
                         } catch (e) {
@@ -2054,7 +2056,7 @@ function debounce(func, wait) {
                     }
                     
                     // Для групповых чатов показываем обычный текст
-                    if (currentChat.type === 'group') {
+                    if (currentChat && currentChat.type === 'group') {
                         messageText = msg.text;
                     }
                 }
