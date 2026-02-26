@@ -2,6 +2,7 @@
 // 🇷🇺 Российский Национальный Чат - Сервер
 // ============================================
 
+const path = require("path");
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -240,7 +241,7 @@ const ReadReceipt = mongoose.model('ReadReceipt', readReceiptSchema);
 // ============================================
 
 // Эндпоинт для загрузки файлов в Cloudinary (В САМОМ НАЧАЛЕ!)
-app.post('/api/upload', authenticateToken, upload.single('file'), async (req, res) => {
+app.post('/api/upload', upload.single('file'), async (req, res) => {
     console.log('🔥 /api/upload вызван!', req.file ? 'Файл есть' : 'Файла нет');
     try {
         if (!req.file) {

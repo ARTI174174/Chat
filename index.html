@@ -3191,46 +3191,58 @@ function searchChats() {
         let recordingStartTime = null;
         let recordingTimer = null;
         
-        // Обработка выбора изображения
-        async function handleImageSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            // Показываем индикатор загрузки
-            showToast('📷 Загрузка изображения...');
-            
-            try {
-                // Сжимаем изображение перед отправкой
-                const compressedFile = await compressImage(file);
-                
-                // Загружаем на сервер
-                const formData = new FormData();
-                formData.append('file', compressedFile);
-                
-                const response = await fetchWithAuth(`${API_URL}/api/upload`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {} // Не ставим Content-Type, FormData сам установит правильный
-                });
-                
-                if (!response) return;
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Отправляем сообщение с изображением
-                    await sendFileMessage('image', data.url);
-                } else {
-                    showToast('Ошибка загрузки изображения');
-                }
-            } catch (err) {
-                console.error('Ошибка:', err);
-                showToast('Ошибка при загрузке изображения');
-            }
-            
-            // Очищаем input, чтобы можно было выбрать тот же файл снова
-            event.target.value = '';
+// Обработка выбора изображения
+async function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        showToast('Ты не авторизован');
+        return;
+    }
+
+    showToast('📷 Загрузка изображения...');
+
+    try {
+        // Сжимаем изображение перед отправкой
+        const compressedFile = await compressImage(file);
+        
+        const formData = new FormData();
+        formData.append("file", compressedFile);
+
+        const response = await fetch(`${API_URL}/api/upload`, {
+            method: "POST",
+            headers: {
+                "Authorization": "Bearer " + token
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error("Ошибка сервера:", data);
+            showToast('Ошибка загрузки: ' + (data.error || 'Неизвестная ошибка'));
+            return;
         }
+
+        if (data.success) {
+            await sendFileMessage('image', data.url);
+            showToast('✅ Изображение загружено');
+        } else {
+            showToast('Ошибка загрузки изображения');
+        }
+
+    } catch (error) {
+        console.error("Ошибка загрузки:", error);
+        showToast('Ошибка при загрузке изображения');
+    }
+
+    // Очищаем input
+    event.target.value = '';
+}
         
         // Сжатие изображения
         function compressImage(file) {
@@ -3348,35 +3360,50 @@ function searchChats() {
             }
         }
         
-        // Загрузка аудио на сервер
-        async function uploadAudio(audioBlob, duration) {
-            showToast('🎤 Загрузка голосового сообщения...');
-            
-            try {
-                const formData = new FormData();
-                formData.append('file', audioBlob, 'voice.webm');
-                formData.append('duration', duration.toString());
-                
-                const response = await fetchWithAuth(`${API_URL}/api/upload`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {}
-                });
-                
-                if (!response) return;
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    await sendFileMessage('audio', data.url, duration);
-                } else {
-                    showToast('Ошибка загрузки голосового сообщения');
-                }
-            } catch (err) {
-                console.error('Ошибка:', err);
-                showToast('Ошибка при загрузке голоса');
-            }
+// Загрузка аудио на сервер
+async function uploadAudio(audioBlob, duration) {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        showToast('Ты не авторизован');
+        return;
+    }
+
+    showToast('🎤 Загрузка голосового сообщения...');
+
+    try {
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'voice.webm');
+        formData.append('duration', duration.toString());
+
+        const response = await fetch(`${API_URL}/api/upload`, {
+            method: "POST",
+            headers: {
+                "Authorization": "Bearer " + token
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error("Ошибка сервера:", data);
+            showToast('Ошибка загрузки: ' + (data.error || 'Неизвестная ошибка'));
+            return;
         }
+
+        if (data.success) {
+            await sendFileMessage('audio', data.url, duration);
+            showToast('✅ Голосовое загружено');
+        } else {
+            showToast('Ошибка загрузки голосового сообщения');
+        }
+
+    } catch (err) {
+        console.error('Ошибка:', err);
+        showToast('Ошибка при загрузке голоса');
+    }
+}
         
         // Отправка сообщения с файлом
         async function sendFileMessage(type, fileUrl, duration = 0) {
