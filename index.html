@@ -2193,14 +2193,6 @@ async function createMessageElement(msg) {
     
     let messageContent = '';
     let messageText = '';
-    let avatarHtml = '';
-    
-    // ====== ВАЖНО: проверяем аватар отправителя ======
-    if (msg.senderId.avatar && msg.senderId.avatar.startsWith('http')) {
-        avatarHtml = `<div style="width: 100%; height: 100%; background-image: url('${msg.senderId.avatar}'); background-size: cover; background-position: center; border-radius: 50%;"></div>`;
-    } else {
-        avatarHtml = msg.senderId.avatar || '😊';
-    }
     
     // Определяем тип сообщения и формируем содержимое
     if (msg.type === 'image' && msg.fileUrl) {
@@ -2234,11 +2226,11 @@ async function createMessageElement(msg) {
     
     messageDiv.setAttribute('data-message-id', msg._id);
     
-    // Формируем HTML
+    // ====== ИСПРАВЛЕНО: аватар с фоном ======
     if (msg.type === 'image' || msg.type === 'audio') {
         messageDiv.innerHTML = `
-            <div class="message-avatar" style="display: flex; justify-content: center; align-items: center; overflow: hidden;">
-                ${avatarHtml}
+            <div class="message-avatar" style="display: flex; justify-content: center; align-items: center; overflow: hidden; ${msg.senderId.avatar && msg.senderId.avatar.startsWith('http') ? `background-image: url('${msg.senderId.avatar}'); background-size: cover; background-position: center;` : ''}">
+                ${!msg.senderId.avatar || !msg.senderId.avatar.startsWith('http') ? (msg.senderId.avatar || '😊') : ''}
             </div>
             <div class="message-content" style="position: relative;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -2251,8 +2243,8 @@ async function createMessageElement(msg) {
         `;
     } else {
         messageDiv.innerHTML = `
-            <div class="message-avatar" style="display: flex; justify-content: center; align-items: center; overflow: hidden;">
-                ${avatarHtml}
+            <div class="message-avatar" style="display: flex; justify-content: center; align-items: center; overflow: hidden; ${msg.senderId.avatar && msg.senderId.avatar.startsWith('http') ? `background-image: url('${msg.senderId.avatar}'); background-size: cover; background-position: center;` : ''}">
+                ${!msg.senderId.avatar || !msg.senderId.avatar.startsWith('http') ? (msg.senderId.avatar || '😊') : ''}
             </div>
             <div class="message-content" style="position: relative;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
