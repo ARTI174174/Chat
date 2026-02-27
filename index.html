@@ -2522,7 +2522,18 @@ async function sendMessage() {
         const data = await response.json();
         
         if (data.success) {
-            input.value = '';
+            input.value = ''; // Очищаем поле
+            
+            // ====== СБРАСЫВАЕМ ВЫСОТУ TEXTAREA ======
+            if (typeof autoResizeTextarea === 'function') {
+                input.style.height = 'auto'; // Сбрасываем высоту
+                autoResizeTextarea(); // Вызываем функцию для установки минимальной высоты
+            } else {
+                // Если функция не определена, просто сбрасываем вручную
+                input.style.height = '40px';
+            }
+            // ====== КОНЕЦ СБРОСА ======
+            
             await loadMessages(currentChat._id);
             await loadChats();
         }
