@@ -3390,6 +3390,11 @@ function searchChats() {
             }, 100);
         }
         
+         
+        // ============================================
+        // Функции для контекстного меню (продолжение)
+        // ============================================
+        
         async function deleteMessage(messageId) {
             showToast('Функция удаления сообщений в разработке');
         }
@@ -3397,11 +3402,11 @@ function searchChats() {
         async function forwardMessage(messageId) {
             showToast('Функция пересылки в разработке');
         }
-    </script>
 
-
-    <!-- Дополнительный скрипт для мобильных устройств -->
-    <script>
+        // ============================================
+        // Дополнительные функции для мобильных устройств
+        // ============================================
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Для iOS: прокрутка к сообщению при открытии клавиатуры
             if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
@@ -3427,13 +3432,275 @@ function searchChats() {
         let audioChunks = [];
         let recordingStartTime = null;
         let recordingTimer = null;
+        let isRecording = false;
         
         // Обработка выбора изображения
         async function handleImageSelect(event) {
-            ...
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                showToast('Ты не авторизован');
+                return;
+            }
+
+            showToast('📷 Загрузка изображения...');
+
+            try {
+                // Сжимаем изображение перед отправкой
+                const compressedFile = await compressImage(file);
+                
+                const formData = new FormData();
+                formData.append("file", compressedFile);
+
+                const response = await fetch(`${API_URL}/api/upload`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    console.error("Ошибка сервера:", data);
+                    showToast('Ошибка загрузки: ' + (data.error || 'Неизвестная ошибка'));
+                    return;
+                }
+
+                if (data.success) {
+                    await sendFileMessage('image', data.url);
+                    showToast('✅ Изображение загружено');
+                } else {
+                    showToast('Ошибка загрузки изображения');
+                }
+
+            } catch (error) {
+                console.error("Ошибка загрузки:", error);
+                showToast('Ошибка при загрузке изображения');
+            }
+
+            // Очищаем input
+            event.target.value = '';
         }
         
-        // ... остальные функции ...
+        // Сжатие изображения
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        // Уменьшаем если слишком большое
+                        const maxSize = 1200;
+                        if (width > maxSize || height > maxSize) {
+                            if (width > height) {
+                                height = Math.round(height * maxSize / width);
+                                width = maxSize;
+                            } else {
+                                width = Math.round(width * maxSize / height);
+                                height = maxSize;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Конвертируем в blob с качеством 0.8
+                        canvas.toBlob((blob) => {
+                            // Создаем новый файл из blob
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        }, 'image/jpeg', 0.8);
+                    };
+                };
+                reader.onerror = reject;
+            });
+        }
+        
+        // Начать/остановить запись голоса
+        function toggleVoiceRecording() {
+            if (isRecording) {
+                stopVoiceRecording();
+            } else {
+                startVoiceRecording();
+            }
+        }
+        
+        // Начать запись голоса
+        async function startVoiceRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                recordingStartTime = Date.now();
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    // Останавливаем все треки
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // Создаем аудио файл
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const duration = (Date.now() - recordingStartTime) / 1000; // в секундах
+                    
+                    // Загружаем на сервер
+                    await uploadAudio(audioBlob, duration);
+                    
+                    // Скрываем индикатор
+                    document.getElementById('voiceRecordingIndicator').style.display = 'none';
+                    if (recordingTimer) clearInterval(recordingTimer);
+                    
+                    isRecording = false;
+                    document.getElementById('voiceRecordBtn').style.background = '#667eea';
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                // Показываем индикатор записи
+                document.getElementById('voiceRecordingIndicator').style.display = 'block';
+                document.getElementById('voiceRecordBtn').style.background = '#ff6b6b';
+                
+                // Таймер для обновления длительности (опционально)
+                recordingTimer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    document.getElementById('voiceRecordingIndicator').innerHTML = 
+                        `🔴 Запись... ${seconds}с <button onclick="stopVoiceRecording()" style="background: white; color: #ff6b6b; border: none; border-radius: 15px; padding: 2px 10px; margin-left: 10px;">Стоп</button>`;
+                }, 1000);
+                
+            } catch (err) {
+                console.error('Ошибка доступа к микрофону:', err);
+                showToast('Не удалось получить доступ к микрофону');
+            }
+        }
+        
+        // Остановить запись голоса
+        function stopVoiceRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+            }
+        }
+        
+        // Загрузка аудио на сервер
+        async function uploadAudio(audioBlob, duration) {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                showToast('Ты не авторизован');
+                return;
+            }
+
+            showToast('🎤 Загрузка голосового сообщения...');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'voice.webm');
+                formData.append('duration', duration.toString());
+
+                const response = await fetch(`${API_URL}/api/upload`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    console.error("Ошибка сервера:", data);
+                    showToast('Ошибка загрузки: ' + (data.error || 'Неизвестная ошибка'));
+                    return;
+                }
+
+                if (data.success) {
+                    await sendFileMessage('audio', data.url, duration);
+                    showToast('✅ Голосовое загружено');
+                } else {
+                    showToast('Ошибка загрузки голосового сообщения');
+                }
+
+            } catch (err) {
+                console.error('Ошибка:', err);
+                showToast('Ошибка при загрузке голоса');
+            }
+        }
+        
+        // Отправка сообщения с файлом
+        async function sendFileMessage(type, fileUrl, duration = 0) {
+            if (!currentChat) return;
+            
+            try {
+                const response = await fetchWithAuth(`${API_URL}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chatId: currentChat._id,
+                        senderId: currentUser._id,
+                        senderName: currentUser.username,
+                        type: type,
+                        fileUrl: fileUrl,
+                        fileDuration: duration,
+                        text: '', // пустой текст для файлов
+                        encryptedText: '' // пустой для файлов
+                    })
+                });
+                
+                if (!response) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Временное отображение
+                    const tempDiv = document.createElement('div');
+                    tempDiv.className = 'message own';
+                    
+                    let contentHtml = '';
+                    if (type === 'image') {
+                        contentHtml = `<img src="${fileUrl}" class="chat-image" onclick="openImageViewer('${fileUrl}')">`;
+                    } else {
+                        contentHtml = `<audio controls class="chat-audio" src="${fileUrl}"></audio>`;
+                    }
+                    
+                    tempDiv.innerHTML = `
+                        <div class="message-avatar">${currentUser.avatar || '😊'}</div>
+                        <div class="message-content">
+                            <div class="message-sender">Вы</div>
+                            ${contentHtml}
+                            <div class="message-time">только что</div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('messagesContainer').appendChild(tempDiv);
+                    document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+                    
+                    await loadMessages(currentChat._id);
+                    await loadChats();
+                }
+            } catch (err) {
+                console.error('Ошибка отправки:', err);
+                showToast('Ошибка отправки сообщения');
+            }
+        }
         
         // Открыть просмотр изображения
         function openImageViewer(imageUrl) {
@@ -3448,7 +3715,6 @@ function searchChats() {
             document.body.appendChild(viewer);
         }
         
-        // ========== ВСТАВЬТЕ НОВЫЕ ФУНКЦИИ СЮДА ==========
         // ============================================
         // Функции для загрузки аватара
         // ============================================
@@ -3601,9 +3867,8 @@ function searchChats() {
                 previewEmoji.style.display = 'none'; // Скрываем эмодзи
             }
         }
-        // ========== КОНЕЦ НОВЫХ ФУНКЦИЙ ==========
         
-    </script>  <!-- ЗДЕСЬ ЗАКРЫВАЕТСЯ СКРИПТ -->
+    </script>  <!-- ЕДИНСТВЕННЫЙ ЗАКРЫВАЮЩИЙ ТЕГ СКРИПТА -->
 
 </body>
 </html>
