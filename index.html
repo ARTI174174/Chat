@@ -967,6 +967,66 @@
             max-height: 90%;
             object-fit: contain;
         }
+		        /* Модальное окно для просмотра изображения */
+        .image-viewer-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            cursor: pointer;
+        }
+        
+        .image-viewer-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+
+        /* ⬇️⬇️⬇️ ВСТАВЬ ЭТОТ КОД СЮДА ⬇️⬇️⬇️ */
+        /* Стили для аватаров-изображений */
+        .profile-avatar[style*="background-image"] {
+            background-size: cover !important;
+            background-position: center !important;
+            font-size: 0 !important;
+        }
+        
+        .chat-avatar[style*="background-image"] {
+            background-size: cover !important;
+            background-position: center !important;
+            font-size: 0 !important;
+        }
+        
+        .chat-avatar[style*="background-image"] .online-indicator {
+            z-index: 2;
+        }
+        
+        .message-avatar[style*="background-image"] {
+            background-size: cover !important;
+            background-position: center !important;
+            font-size: 0 !important;
+        }
+        
+        .user-avatar[style*="background-image"] {
+            background-size: cover !important;
+            background-position: center !important;
+            font-size: 0 !important;
+        }
+        
+        #avatarPreview[style*="background-image"] {
+            background-size: cover !important;
+            background-position: center !important;
+        }
+        
+        #avatarPreview[style*="background-image"] #avatarPreviewEmoji {
+            display: none !important;
+        }
+		
     </style>
 </head>
 <body>
@@ -1684,13 +1744,21 @@ function createChatItem(chat) {
     
     let chatName = chat.name;
     let chatAvatar = '💬';
+    let avatarStyle = '';
     let unreadCount = chat.unreadCount || 0;
     
     if (chat.type === 'private') {
         const otherParticipant = chat.participants.find(p => p._id !== currentUser._id);
         if (otherParticipant) {
             chatName = `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username;
-            chatAvatar = otherParticipant.avatar || '😊';
+            
+            // Проверяем, ссылка или эмодзи
+            if (otherParticipant.avatar && otherParticipant.avatar.startsWith('http')) {
+                chatAvatar = ''; // Пусто, будем использовать фон
+                avatarStyle = `style="background-image: url('${otherParticipant.avatar}'); background-size: cover; background-position: center;"`;
+            } else {
+                chatAvatar = otherParticipant.avatar || '😊';
+            }
         }
     }
     
@@ -1715,7 +1783,7 @@ function createChatItem(chat) {
         `<span style="background: #667eea; color: white; border-radius: 50%; min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; padding: 0 4px; margin-left: 5px;">${unreadCount}</span>` : '';
     
     div.innerHTML = `
-        <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px; position: relative;">
+        <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px; position: relative; overflow: hidden;" ${avatarStyle}>
             ${chatAvatar}
             ${chat.type === 'private' ? '<span class="online-indicator" style="background: ' + (getOnlineStatus(chat) ? '#4CAF50' : '#9e9e9e') + '"></span>' : ''}
         </div>
@@ -3553,6 +3621,173 @@ async function uploadAudio(audioBlob, duration) {
             viewer.appendChild(img);
             document.body.appendChild(viewer);
         }
+		        // Открыть просмотр изображения
+        function openImageViewer(imageUrl) {
+            const viewer = document.createElement('div');
+            viewer.className = 'image-viewer-modal';
+            viewer.onclick = () => viewer.remove();
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            
+            viewer.appendChild(img);
+            document.body.appendChild(viewer);
+        }
+
+        // ========== ВСТАВЬ СЮДА ==========
+        // ============================================
+        // Функции для загрузки аватара
+        // ============================================
+
+        // Выбрать файл для аватара
+        function selectAvatarFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    uploadAvatar(file);
+                }
+            };
+            input.click();
+        }
+
+        // Загрузить аватар на сервер
+        async function uploadAvatar(file) {
+            // Проверяем размер (максимум 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Файл слишком большой (максимум 2MB)');
+                return;
+            }
+            
+            // Проверяем тип файла
+            if (!file.type.startsWith('image/')) {
+                showToast('Можно загружать только изображения');
+                return;
+            }
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showToast('Требуется авторизация');
+                return;
+            }
+            
+            showToast('🔄 Загрузка аватара...');
+            
+            try {
+                // Сжимаем изображение перед отправкой
+                const compressedFile = await compressImageForAvatar(file);
+                
+                const formData = new FormData();
+                formData.append('avatar', compressedFile);
+                
+                const response = await fetch(`${API_URL}/api/upload-avatar`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Ошибка загрузки');
+                }
+                
+                if (data.success) {
+                    // Обновляем текущего пользователя
+                    currentUser.avatar = data.url;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // Обновляем аватар в интерфейсе
+                    updateAvatarDisplay(data.url);
+                    
+                    // Обновляем предпросмотр в модальном окне
+                    updateAvatarPreview(data.url);
+                    
+                    showToast('✅ Аватар успешно загружен');
+                }
+                
+            } catch (err) {
+                console.error('Ошибка загрузки аватара:', err);
+                showToast('Ошибка при загрузке аватара');
+            }
+        }
+
+        // Сжатие изображения для аватара
+        function compressImageForAvatar(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        // Делаем квадрат 300x300
+                        const size = 300;
+                        
+                        canvas.width = size;
+                        canvas.height = size;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Вычисляем отступы для центрирования
+                        const minSize = Math.min(width, height);
+                        const offsetX = (width - minSize) / 2;
+                        const offsetY = (height - minSize) / 2;
+                        
+                        // Рисуем изображение с обрезкой по центру
+                        ctx.drawImage(img, offsetX, offsetY, minSize, minSize, 0, 0, size, size);
+                        
+                        // Конвертируем в blob с качеством 0.9
+                        canvas.toBlob((blob) => {
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        }, 'image/jpeg', 0.9);
+                    };
+                };
+                reader.onerror = reject;
+            });
+        }
+
+        // Обновить отображение аватара в интерфейсе
+        function updateAvatarDisplay(url) {
+            const profileAvatar = document.getElementById('profileAvatar');
+            if (profileAvatar) {
+                profileAvatar.innerHTML = ''; // Очищаем
+                profileAvatar.style.backgroundImage = `url('${url}')`;
+                profileAvatar.style.backgroundSize = 'cover';
+                profileAvatar.style.backgroundPosition = 'center';
+                profileAvatar.style.backgroundColor = 'transparent';
+                profileAvatar.style.fontSize = '0'; // Скрываем текст
+            }
+            
+            // Обновляем во всех чатах при следующей перерисовке
+            loadChats();
+        }
+
+        // Обновить предпросмотр в модальном окне
+        function updateAvatarPreview(url) {
+            const preview = document.getElementById('avatarPreview');
+            const previewEmoji = document.getElementById('avatarPreviewEmoji');
+            
+            if (preview && previewEmoji) {
+                preview.style.backgroundImage = `url('${url}')`;
+                preview.style.backgroundSize = 'cover';
+                preview.style.backgroundPosition = 'center';
+                preview.style.backgroundColor = 'transparent';
+                previewEmoji.style.display = 'none'; // Скрываем эмодзи
+            }
+        }
+		
     </script>
 
 </body>
