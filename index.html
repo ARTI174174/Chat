@@ -1421,7 +1421,7 @@
     <button class="chat-action-btn" onclick="document.getElementById('imageInput').click()" style="background: #667eea; color: white;">📷</button>
     
     <!-- Кнопка для записи голоса -->
-    <button class="chat-action-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()" style="background: #667eea; color: white;">🎤</button>
+<button class="chat-action-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()" style="background: #667eea; color: white;">🎤</button>
     
     <!-- Поле ввода и счетчик в одной обертке -->
     <div style="flex: 1; position: relative; display: flex; align-items: center;">
@@ -3966,64 +3966,68 @@ async function handleImageSelect(event) {
             }
         }
         
-        // Начать запись голоса
-        async function startVoiceRecording() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                recordingStartTime = Date.now();
-                
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
-                
-                mediaRecorder.onstop = async () => {
-                    // Останавливаем все треки
-                    stream.getTracks().forEach(track => track.stop());
-                    
-                    // Создаем аудио файл
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const duration = (Date.now() - recordingStartTime) / 1000; // в секундах
-                    
-                    // Загружаем на сервер
-                    await uploadAudio(audioBlob, duration);
-                    
-                    // Скрываем индикатор
-                    document.getElementById('voiceRecordingIndicator').style.display = 'none';
-                    if (recordingTimer) clearInterval(recordingTimer);
-                    
-                    isRecording = false;
-                    document.getElementById('voiceRecordBtn').style.background = '#667eea';
-                };
-                
-                mediaRecorder.start();
-                isRecording = true;
-                
-                // Показываем индикатор записи
-                document.getElementById('voiceRecordingIndicator').style.display = 'block';
-                document.getElementById('voiceRecordBtn').style.background = '#ff6b6b';
-                
-                // Таймер для обновления длительности (опционально)
-                recordingTimer = setInterval(() => {
-                    const seconds = Math.floor((Date.now() - recordingStartTime) / 1000);
-                    document.getElementById('voiceRecordingIndicator').innerHTML = 
-                        `🔴 Запись... ${seconds}с <button onclick="stopVoiceRecording()" style="background: white; color: #ff6b6b; border: none; border-radius: 15px; padding: 2px 10px; margin-left: 10px;">Стоп</button>`;
-                }, 1000);
-                
-            } catch (err) {
-                console.error('Ошибка доступа к микрофону:', err);
-                showToast('Не удалось получить доступ к микрофону');
-            }
-        }
+// Начать запись голоса
+async function startVoiceRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // Остановить запись голоса
-        function stopVoiceRecording() {
-            if (mediaRecorder && isRecording) {
-                mediaRecorder.stop();
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        recordingStartTime = Date.now();
+        
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+        
+        mediaRecorder.onstop = async () => {
+            // Останавливаем все треки
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Создаем аудио файл
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const duration = (Date.now() - recordingStartTime) / 1000; // в секундах
+            
+            // Загружаем на сервер
+            await uploadAudio(audioBlob, duration);
+            
+            // Сбрасываем индикатор записи (теперь через уведомление)
+            isRecording = false;
+            document.getElementById('voiceRecordBtn').style.background = '#667eea';
+            showToast('⏹️ Запись остановлена');
+        };
+        
+        mediaRecorder.start();
+        isRecording = true;
+        
+        // Меняем цвет кнопки на красный
+        document.getElementById('voiceRecordBtn').style.background = '#ff6b6b';
+        showToast('🔴 Запись голоса... Нажмите кнопку еще раз для остановки');
+        
+        // Таймер для уведомления каждые 10 секунд
+        let seconds = 0;
+        recordingTimer = setInterval(() => {
+            seconds++;
+            if (seconds % 10 === 0) { // Каждые 10 секунд
+                showToast(`⏺️ Запись... ${seconds}с`);
             }
+        }, 1000);
+        
+    } catch (err) {
+        console.error('Ошибка доступа к микрофону:', err);
+        showToast('❌ Не удалось получить доступ к микрофону');
+    }
+}
+        
+// Остановить запись голоса
+function stopVoiceRecording() {
+    if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        if (recordingTimer) {
+            clearInterval(recordingTimer);
+            recordingTimer = null;
         }
+    }
+}
         
 // Загрузка аудио на сервер
 async function uploadAudio(audioBlob, duration) {
