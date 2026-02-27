@@ -1148,22 +1148,23 @@
                 
                 <div class="messages-container" id="messagesContainer"></div>
                 
-                <div class="message-input-area" id="messageInputArea" style="display: none;">
-                    <!-- Кнопка для выбора изображения -->
-                    <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
-                    <button class="chat-action-btn" onclick="document.getElementById('imageInput').click()" style="background: #667eea; color: white; padding: 8px 12px;">📷</button>
-                    
-                    <!-- Кнопка для записи голоса -->
-                    <button class="chat-action-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()" style="background: #667eea; color: white; padding: 8px 12px;">🎤</button>
-                    
-                    <textarea placeholder="Напишите сообщение..." id="messageInput" onkeypress="handleMessageKeyPress(event)"></textarea>
-                    <button class="send-btn" onclick="sendMessage()">➤</button>
-                </div>
-                
-                <!-- Индикатор записи голоса (скрыт по умолчанию) -->
-                <div id="voiceRecordingIndicator" style="display: none; padding: 5px 10px; background: #ff6b6b; color: white; border-radius: 20px; margin: 5px; text-align: center;">
-                    🔴 Запись... <button onclick="stopVoiceRecording()" style="background: white; color: #ff6b6b; border: none; border-radius: 15px; padding: 2px 10px; margin-left: 10px;">Стоп</button>
-                </div>
+<div class="message-input-area" id="messageInputArea" style="display: none;">
+    <!-- Кнопка для выбора изображения -->
+    <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+    <button class="chat-action-btn" onclick="document.getElementById('imageInput').click()" style="background: #667eea; color: white; padding: 8px 12px;">📷</button>
+    
+    <!-- Кнопка для записи голоса -->
+    <button class="chat-action-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()" style="background: #667eea; color: white; padding: 8px 12px;">🎤</button>
+    
+    <div style="position: relative; flex: 1;">
+        <textarea placeholder="Напишите сообщение..." id="messageInput" onkeypress="handleMessageKeyPress(event)" oninput="updateCharCounter()" maxlength="4000"></textarea>
+        <div id="charCounter" style="position: absolute; bottom: 5px; right: 10px; font-size: 11px; color: #999; background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 10px;">
+            0/4000
+        </div>
+    </div>
+    
+    <button class="send-btn" onclick="sendMessage()">➤</button>
+</div>
                 
                 <div style="flex: 1; display: flex; justify-content: center; align-items: center; color: #999;" id="noChatSelected">
                     Выберите чат для начала общения
@@ -2296,25 +2297,35 @@ async function sendMessage() {
     
     if (!text || !currentChat) return;
     
+    // ====== УРОВЕНЬ 1: Проверка на 4000 символов ======
+    if (text.length > 4000) {
+        showToast('❌ Максимальное количество символов 4000');
+        return;
+    }
+    
     try {
         let encryptedText = text; // По умолчанию без шифрования
         
-        // Для личных чатов пытаемся зашифровать
+        // ====== УРОВЕНЬ 2: Шифрование только для коротких сообщений ======
         if (currentChat.type === 'private') {
             const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
             if (otherParticipant) {
                 const publicKey = publicKeys[otherParticipant._id];
-                if (publicKey) {
+                
+                // Шифруем только если:
+                // 1. Есть публичный ключ
+                // 2. Сообщение короче 190 символов
+                if (publicKey && text.length < 190) {
                     try {
                         encryptedText = await encryptMessage(text, publicKey);
+                        console.log('🔐 Сообщение зашифровано (', text.length, 'символов)');
                     } catch (err) {
-                        console.error('Ошибка шифрования:', err);
-                        // Отправляем обычный текст если не получилось зашифровать
-                        encryptedText = text;
+                        console.error('❌ Ошибка шифрования:', err);
+                        encryptedText = text; // Отправляем обычный текст
+                        showToast('⚠️ Ошибка шифрования, сообщение отправлено без шифрования');
                     }
-                } else {
-                    console.warn('Нет публичного ключа для', otherParticipant.username);
-                    encryptedText = text; // Отправляем обычный текст
+                } else if (text.length >= 190) {
+                    console.log('📝 Сообщение длинное (', text.length, 'символов) - отправлено без шифрования');
                 }
             }
         }
@@ -2326,8 +2337,8 @@ async function sendMessage() {
                 chatId: currentChat._id,
                 senderId: currentUser._id,
                 senderName: currentUser.username,
-                text, // ← Отправляем обычный текст
-                encryptedText
+                text, // Обычный текст для отображения
+                encryptedText // Зашифрованный или обычный текст
             })
         });
         
@@ -3659,24 +3670,26 @@ async function uploadAudio(audioBlob, duration) {
 }
         
         // Отправка сообщения с файлом
-        async function sendFileMessage(type, fileUrl, duration = 0) {
-            if (!currentChat) return;
-            
-            try {
-                const response = await fetchWithAuth(`${API_URL}/messages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chatId: currentChat._id,
-                        senderId: currentUser._id,
-                        senderName: currentUser.username,
-                        type: type,
-                        fileUrl: fileUrl,
-                        fileDuration: duration,
-                        text: '', // пустой текст для файлов
-                        encryptedText: '' // пустой для файлов
-                    })
-                });
+async function sendFileMessage(type, fileUrl, duration = 0) {
+    if (!currentChat) return;
+    
+    // Файлы не шифруем, только текст
+    
+    try {
+        const response = await fetchWithAuth(`${API_URL}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chatId: currentChat._id,
+                senderId: currentUser._id,
+                senderName: currentUser.username,
+                type: type,
+                fileUrl: fileUrl,
+                fileDuration: duration,
+                text: '', // пустой текст для файлов
+                encryptedText: '' // пустой для файлов
+            })
+        });
                 
                 if (!response) return;
                 
@@ -3901,7 +3914,24 @@ function updateAvatarDisplay(url) {
                 previewEmoji.style.display = 'none'; // Скрываем эмодзи
             }
         }
-		
+		 // Функция для обновления счетчика символов
+        function updateCharCounter() {
+            const input = document.getElementById('messageInput');
+            const counter = document.getElementById('charCounter');
+            if (input && counter) {
+                const len = input.value.length;
+                counter.textContent = `${len}/4000`;
+                
+                // Меняем цвет если接近 лимит
+                if (len > 3500) {
+                    counter.style.color = '#ff6b6b';
+                } else if (len > 3000) {
+                    counter.style.color = '#f39c12';
+                } else {
+                    counter.style.color = '#999';
+                }
+            }
+        }
     </script>
 
 </body>
