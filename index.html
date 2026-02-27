@@ -1658,24 +1658,29 @@ function showMainScreen() {
             }, 3000);
         }
         
-        async function loadAllUsers() {
-            try {
-                const response = await fetchWithAuth(`${API_URL}/users/${currentUser._id}`);
-                if (!response) return;
-                
-                allUsers = await response.json();
-                
-                for (const user of allUsers) {
-                    if (user.publicKey) {
-                        publicKeys[user._id] = await importPublicKey(user.publicKey);
-                    }
+async function loadAllUsers() {
+    try {
+        const response = await fetchWithAuth(`${API_URL}/users/${currentUser._id}`);
+        if (!response) return;
+        
+        allUsers = await response.json();
+        
+        for (const user of allUsers) {
+            if (user.publicKey) {
+                try {
+                    publicKeys[user._id] = await importPublicKey(user.publicKey);
+                } catch (err) {
+                    console.error('Ошибка импорта ключа для пользователя', user.username, err);
+                    publicKeys[user._id] = null;
                 }
-                
-                updateAllUsersList();
-            } catch (err) {
-                console.error('Ошибка загрузки пользователей:', err);
             }
         }
+        
+        updateAllUsersList();
+    } catch (err) {
+        console.error('Ошибка загрузки пользователей:', err);
+    }
+}
         
         async function loadFriendRequests() {
             try {
@@ -2285,49 +2290,61 @@ async function createMessageElement(msg) {
             container.scrollTop = container.scrollHeight;
         }
         
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
-            
-            if (!text || !currentChat) return;
-            
-            try {
-                let encryptedText = text; // По умолчанию без шифрования
-                
-                // Для групповых чатов пока не шифруем (в разработке)
-                if (currentChat.type === 'private') {
-                    const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
-                    if (otherParticipant && publicKeys[otherParticipant._id]) {
-                        encryptedText = await encryptMessage(text, publicKeys[otherParticipant._id]);
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
+    
+    if (!text || !currentChat) return;
+    
+    try {
+        let encryptedText = text; // По умолчанию без шифрования
+        
+        // Для личных чатов пытаемся зашифровать
+        if (currentChat.type === 'private') {
+            const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
+            if (otherParticipant) {
+                const publicKey = publicKeys[otherParticipant._id];
+                if (publicKey) {
+                    try {
+                        encryptedText = await encryptMessage(text, publicKey);
+                    } catch (err) {
+                        console.error('Ошибка шифрования:', err);
+                        // Отправляем обычный текст если не получилось зашифровать
+                        encryptedText = text;
                     }
+                } else {
+                    console.warn('Нет публичного ключа для', otherParticipant.username);
+                    encryptedText = text; // Отправляем обычный текст
                 }
-                
-                const response = await fetchWithAuth(`${API_URL}/messages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chatId: currentChat._id,
-                        senderId: currentUser._id,
-                        senderName: currentUser.username,
-                        text, // ← Отправляем обычный текст для групповых чатов
-                        encryptedText
-                    })
-                });
-                
-                if (!response) return;
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    input.value = '';
-                    await loadMessages(currentChat._id);
-                    await loadChats();
-                }
-            } catch (err) {
-                console.error('Ошибка отправки:', err);
-                showToast('Ошибка отправки сообщения');
             }
         }
+        
+        const response = await fetchWithAuth(`${API_URL}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chatId: currentChat._id,
+                senderId: currentUser._id,
+                senderName: currentUser.username,
+                text, // ← Отправляем обычный текст
+                encryptedText
+            })
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            input.value = '';
+            await loadMessages(currentChat._id);
+            await loadChats();
+        }
+    } catch (err) {
+        console.error('Ошибка отправки:', err);
+        showToast('Ошибка отправки сообщения');
+    }
+}
         
         function handleMessageKeyPress(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -3026,19 +3043,24 @@ function updateAllUsersList() {
             return btoa(String.fromCharCode(...new Uint8Array(exported)));
         }
         
-        async function importPublicKey(keyData) {
-            const binary = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
-            return await crypto.subtle.importKey(
-                "spki",
-                binary,
-                {
-                    name: "RSA-OAEP",
-                    hash: "SHA-256"
-                },
-                true,
-                ["encrypt"]
-            );
-        }
+async function importPublicKey(keyData) {
+    try {
+        const binary = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
+        return await crypto.subtle.importKey(
+            "spki",
+            binary,
+            {
+                name: "RSA-OAEP",
+                hash: "SHA-256"
+            },
+            true,
+            ["encrypt"]
+        );
+    } catch (err) {
+        console.error('Ошибка импорта публичного ключа:', err);
+        return null;
+    }
+}
         
         async function importPrivateKey(keyData) {
             const binary = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
@@ -3705,6 +3727,14 @@ async function uploadAudio(audioBlob, duration) {
             viewer.appendChild(img);
             document.body.appendChild(viewer);
         }
+		
+		        // Функция для отладки ключей
+        function debugKeys() {
+            console.log('Публичные ключи:', publicKeys);
+            console.log('Приватные ключи:', privateKeys);
+            console.log('Текущий пользователь:', currentUser);
+        }
+		
 		        // Открыть просмотр изображения
         function openImageViewer(imageUrl) {
             const viewer = document.createElement('div');
