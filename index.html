@@ -1423,13 +1423,17 @@
     <!-- Кнопка для записи голоса -->
     <button class="chat-action-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()" style="background: #667eea; color: white;">🎤</button>
     
-    <!-- Поле ввода -->
-    <textarea placeholder="Напишите сообщение..." 
-              id="messageInput" 
-              onkeypress="handleMessageKeyPress(event)" 
-              oninput="autoResizeTextarea()"
-              maxlength="4000"
-              rows="1"></textarea>
+    <!-- Поле ввода и счетчик в одной обертке -->
+    <div style="flex: 1; position: relative; display: flex; align-items: center;">
+        <textarea placeholder="Напишите сообщение..." 
+                  id="messageInput" 
+                  onkeypress="handleMessageKeyPress(event)" 
+                  oninput="autoResizeTextarea(); updateCharCounter()"
+                  maxlength="4000"
+                  rows="1"
+                  style="width: 100%; padding-right: 60px;"></textarea>
+        <span id="charCounter" style="position: absolute; right: 10px; bottom: 8px; font-size: 11px; color: #999; background: white; padding: 2px 5px; border-radius: 10px;">0/4000</span>
+    </div>
     
     <!-- Кнопка отправки -->
     <button class="send-btn" onclick="sendMessage()">➤</button>
@@ -4204,6 +4208,25 @@ function updateAvatarDisplay(url) {
                 textarea.style.height = newHeight + 'px';
             }
         }
+		
+		// Функция для обновления счетчика символов
+function updateCharCounter() {
+    const input = document.getElementById('messageInput');
+    const counter = document.getElementById('charCounter');
+    if (input && counter) {
+        const len = input.value.length;
+        counter.textContent = `${len}/4000`;
+        
+        // Меняем цвет если接近 лимит
+        if (len > 3500) {
+            counter.style.color = '#ff6b6b';
+        } else if (len > 3000) {
+            counter.style.color = '#f39c12';
+        } else {
+            counter.style.color = '#999';
+        }
+    }
+}
 		
 		 // Функция для обновления счетчика символов
         function updateCharCounter() {
