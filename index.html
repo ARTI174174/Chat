@@ -1067,38 +1067,37 @@
 
         /* ⬇️⬇️⬇️ ВСТАВЬ НОВЫЕ СТИЛИ СЮДА ⬇️⬇️⬇️ */
         /* ========== УЛУЧШЕННОЕ ПОЛЕ ВВОДА ========== */
-        .message-input-area {
-            padding: 10px 15px;
-            background: white;
-            border-top: 1px solid #f0f0f0;
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-            flex-wrap: wrap;
-        }
+.message-input-area {
+    padding: 10px 15px;
+    background: white;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    gap: 8px;
+    align-items: center;      /* Центрируем по вертикали */
+    flex-wrap: nowrap;        /* Все в одну строку */
+}
 
-        .message-input-area textarea {
-            flex: 1;
-            min-width: 150px;
-            min-height: 40px;
-            max-height: 150px;
-            padding: 10px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 15px;
-            line-height: 1.5;
-            resize: none;
-            transition: all 0.3s;
-            font-family: inherit;
-            overflow-y: auto;
-            scrollbar-width: thin;
-        }
+.message-input-area textarea {
+    flex: 1;
+    min-width: 50px;
+    min-height: 40px;
+    max-height: 150px;
+    padding: 10px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 25px;
+    font-size: 15px;
+    line-height: 1.5;
+    resize: none;
+    transition: all 0.3s;
+    font-family: inherit;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
 
-        .message-input-area textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
+.message-input-area .chat-action-btn,
+.message-input-area .send-btn {
+    flex-shrink: 0;  /* Кнопки не сжимаются */
+}
 
         .message-input-area textarea::placeholder {
             color: #999;
@@ -1135,31 +1134,60 @@
             transform: scale(1.05);
         }
 
-        /* ========== АДАПТАЦИЯ ДЛЯ ТЕЛЕФОНОВ ========== */
-        @media (max-width: 768px) {
-            .message-input-area {
-                padding: 8px 10px;
-                gap: 6px;
-            }
-            
-            .message-input-area textarea {
-                font-size: 16px;
-                padding: 8px 12px;
-                min-height: 40px;
-            }
-            
-            .message-input-area .chat-action-btn {
-                min-width: 40px;
-                height: 40px;
-                font-size: 16px;
-            }
-            
-            .message-input-area .send-btn {
-                min-width: 45px;
-                height: 45px;
-                font-size: 18px;
-            }
-        }
+/* ========== АДАПТАЦИЯ ДЛЯ ТЕЛЕФОНОВ ========== */
+@media (max-width: 768px) {
+    .message-input-area {
+        padding: 8px 10px;
+        gap: 6px;
+        display: flex;
+        flex-direction: row;  /* Все в одну строку */
+        align-items: center;
+        flex-wrap: nowrap;    /* Запрещаем перенос */
+    }
+    
+    .message-input-area textarea {
+        font-size: 16px;
+        padding: 8px 12px;
+        min-height: 40px;
+        max-height: 80px;     /* Чуть меньше на телефоне */
+        flex: 1;              /* Растягивается */
+        min-width: 50px;       /* Минимальная ширина */
+    }
+    
+    .message-input-area .chat-action-btn {
+        min-width: 40px;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        font-size: 16px;
+        flex-shrink: 0;        /* Запрещаем сжиматься */
+    }
+    
+    .message-input-area .send-btn {
+        min-width: 40px;
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        flex-shrink: 0;        /* Запрещаем сжиматься */
+    }
+}
+
+/* Для очень маленьких экранов (до 400px) */
+@media (max-width: 400px) {
+    .message-input-area .chat-action-btn {
+        min-width: 36px;
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+    
+    .message-input-area .send-btn {
+        min-width: 36px;
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+}
 
         /* Для очень маленьких экранов */
         @media (max-width: 480px) {
@@ -1323,22 +1351,21 @@
 <div class="message-input-area" id="messageInputArea" style="display: none;">
     <!-- Кнопка для выбора изображения -->
     <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
-    <button class="chat-action-btn" onclick="document.getElementById('imageInput').click()" style="background: #667eea; color: white; padding: 8px 12px; min-width: 40px;">📷</button>
+    <button class="chat-action-btn" onclick="document.getElementById('imageInput').click()" style="background: #667eea; color: white;">📷</button>
     
     <!-- Кнопка для записи голоса -->
-    <button class="chat-action-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()" style="background: #667eea; color: white; padding: 8px 12px; min-width: 40px;">🎤</button>
+    <button class="chat-action-btn" id="voiceRecordBtn" onclick="toggleVoiceRecording()" style="background: #667eea; color: white;">🎤</button>
     
-    <!-- Поле ввода (теперь растягивается) -->
-<textarea placeholder="Напишите сообщение..." 
-          id="messageInput" 
-          onkeypress="handleMessageKeyPress(event)" 
-          oninput="autoResizeTextarea()"  ← ДОБАВЬ ЭТО
-          maxlength="4000"
-          rows="1"
-          style="flex: 1; min-height: 40px; max-height: 150px; resize: none; padding: 10px 12px; border: 2px solid #f0f0f0; border-radius: 25px; font-size: 14px; line-height: 1.5; transition: all 0.3s; overflow-y: auto;"></textarea>
+    <!-- Поле ввода -->
+    <textarea placeholder="Напишите сообщение..." 
+              id="messageInput" 
+              onkeypress="handleMessageKeyPress(event)" 
+              oninput="autoResizeTextarea()"
+              maxlength="4000"
+              rows="1"></textarea>
     
     <!-- Кнопка отправки -->
-    <button class="send-btn" onclick="sendMessage()" style="min-width: 50px; height: 50px;">➤</button>
+    <button class="send-btn" onclick="sendMessage()">➤</button>
 </div>
                 
                 <div style="flex: 1; display: flex; justify-content: center; align-items: center; color: #999;" id="noChatSelected">
