@@ -729,7 +729,7 @@
         padding: 12px 15px;
         background: white;
         border-bottom: 1px solid #f0f0f0;
-        flex-shrink: 0; /* Не сжимается */
+        flex-shrink: 0;
     }
     
     .chat-header-info {
@@ -754,31 +754,71 @@
     }
     
     .messages-container {
-        flex: 1; /* Занимает всё доступное пространство */
+        flex: 1;
         overflow-y: auto;
         padding: 15px;
-        min-height: 0; /* Важно для flexbox */
+        min-height: 0;
     }
     
     .message {
         max-width: 85%;
     }
     
+    /* ===== НОВЫЙ КОД ДЛЯ ПОЛЯ ВВОДА ===== */
     .message-input-area {
-        padding: 10px;
+        padding: 8px 10px;
+        gap: 6px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
         background: white;
         border-top: 1px solid #f0f0f0;
-        flex-shrink: 0; /* Не сжимается */
-        display: flex;
-        gap: 8px;
     }
     
     .message-input-area textarea {
-        font-size: 16px; /* Предотвращает зум на iPhone */
+        flex: 1;
+        min-width: 50px;
+        min-height: 44px;
+        max-height: 80px;
         padding: 10px 12px;
-        height: auto;
-        min-height: 40px;
-        max-height: 100px;
+        font-size: 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 22px;
+        background: white;
+        margin: 0 2px;
+    }
+    
+    .message-input-area button {
+        min-width: 44px;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        font-size: 18px;
+        flex-shrink: 0;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .message-input-area .chat-action-btn {
+        background: #667eea;
+        color: white;
+    }
+    
+    .message-input-area .send-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin-left: 8px;
+        font-size: 20px;
+    }
+    
+    .message-input-area button:active {
+        transform: scale(0.95);
     }
     
     .modal-content {
@@ -794,11 +834,11 @@
         justify-content: center;
     }
     
-    /* Фикс для iOS, чтобы поле ввода не перекрывалось клавиатурой */
     .right-panel.active .message-input-area {
         padding-bottom: 15px;
     }
 }
+
 
         .mobile-back-btn {
             display: none;
@@ -1226,6 +1266,34 @@
             background: #a8a8a8;
         }
         /* ⬆️⬆️⬆️ КОНЕЦ НОВЫХ СТИЛЕЙ ⬆️⬆️⬆️ */
+		
+		        /* Стили для скроллбара */
+        .message-input-area textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .message-input-area textarea::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+
+        .message-input-area textarea::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        .message-input-area textarea::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* ===== СТИЛИ ДЛЯ ДЕСКТОПА ===== */
+        /* Кнопка отправки на десктопе тоже правее */
+        .message-input-area .send-btn {
+            margin-left: 5px;
+        }
+        /* ⬆️⬆️⬆️ КОНЕЦ НОВЫХ СТИЛЕЙ ⬆️⬆️⬆️ */
+		
+    </style>
 		
     </style>
 </head>
