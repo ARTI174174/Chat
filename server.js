@@ -82,7 +82,7 @@ app.use(helmet({
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
             scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
+            imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"], // ← ДОБАВЬТЕ ЭТО
             mediaSrc: ["'self'", "https://res.cloudinary.com"],
             connectSrc: ["'self'", "https://chat-jy2v.onrender.com", "https://res.cloudinary.com"],
         },
