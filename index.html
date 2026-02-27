@@ -1178,10 +1178,28 @@
                 <!-- ========== КОНЕЦ БЛОКА СМЕНЫ ПАРОЛЯ ========== -->
                 <!-- ========== КОНЕЦ НОВЫХ ПОЛЕЙ ========== -->
                 
+                <!-- ========== НОВЫЙ БЛОК ДЛЯ АВАТАРА ========== -->
                 <div class="form-group">
                     <label>Аватар</label>
+                    
+                    <!-- Предпросмотр текущего аватара -->
+                    <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
+                        <div id="avatarPreview" style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; font-size: 48px; color: white; overflow: hidden;">
+                            <span id="avatarPreviewEmoji">😊</span>
+                        </div>
+                        <div style="flex: 1;">
+                            <button class="btn btn-secondary" onclick="selectAvatarFile()" style="margin-bottom: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                📷 Загрузить фото
+                            </button>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 5px;">Максимум 2MB. Рекомендуемый размер 300x300</p>
+                            <p style="font-size: 12px; color: #666;">Или выберите эмодзи ниже:</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Селектор эмодзи (оставляем как есть) -->
                     <div class="avatar-selector" id="profileAvatarSelector"></div>
                 </div>
+                <!-- ========== КОНЕЦ БЛОКА ДЛЯ АВАТАРА ========== -->
                 
                 <button class="btn" onclick="updateProfile()">Сохранить изменения</button>
             </div>
@@ -1667,15 +1685,66 @@ function createChatItem(chat) {
     
     let chatName = chat.name;
     let chatAvatar = '💬';
+    let avatarStyle = '';
     let unreadCount = chat.unreadCount || 0;
     
     if (chat.type === 'private') {
         const otherParticipant = chat.participants.find(p => p._id !== currentUser._id);
         if (otherParticipant) {
             chatName = `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username;
-            chatAvatar = otherParticipant.avatar || '😊';
+            
+            // ====== ИЗМЕНЕНИЕ: проверяем, ссылка или эмодзи ======
+            if (otherParticipant.avatar && otherParticipant.avatar.startsWith('http')) {
+                chatAvatar = ''; // Пусто, будем использовать фон
+                avatarStyle = `style="background-image: url('${otherParticipant.avatar}'); background-size: cover; background-position: center;"`;
+            } else {
+                chatAvatar = otherParticipant.avatar || '😊';
+            }
         }
     }
+    
+    // Получаем текст последнего сообщения
+    let lastMessageText = '';
+    if (chat.lastMessage && typeof chat.lastMessage === 'object') {
+        lastMessageText = chat.lastMessage.text || '';
+    } else {
+        lastMessageText = chat.lastMessage || '';
+    }
+    
+    // Получаем время последнего сообщения
+    let lastMessageTime = '';
+    if (chat.lastMessage && chat.lastMessage.createdAt) {
+        lastMessageTime = new Date(chat.lastMessage.createdAt).toLocaleTimeString().slice(0,5);
+    } else if (chat.lastMessageTime) {
+        lastMessageTime = new Date(chat.lastMessageTime).toLocaleTimeString().slice(0,5);
+    }
+    
+    // Формируем HTML для счетчика непрочитанных
+    const unreadBadge = unreadCount > 0 ? 
+        `<span style="background: #667eea; color: white; border-radius: 50%; min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; padding: 0 4px; margin-left: 5px;">${unreadCount}</span>` : '';
+    
+    // ====== ИЗМЕНЕНИЕ: добавляем условие для фона ======
+    div.innerHTML = `
+        <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px; position: relative; overflow: hidden;" ${avatarStyle}>
+            ${chatAvatar}
+            ${chat.type === 'private' ? '<span class="online-indicator" style="background: ' + (getOnlineStatus(chat) ? '#4CAF50' : '#9e9e9e') + '"></span>' : ''}
+        </div>
+        <div class="chat-info" style="margin-left: 5px;">
+            <div class="chat-name" style="font-size: 15px; display: flex; align-items: center;">
+                ${chatName}
+                ${unreadBadge}
+                ${chat.isPinned ? '<span class="pin-icon" style="margin-left: 5px;">📌</span>' : ''}
+            </div>
+            <div class="chat-last-message" style="font-size: 12px; color: #888; ${unreadCount > 0 ? 'font-weight: bold; color: #333;' : ''}">${lastMessageText}</div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+            <div class="chat-time" style="font-size: 10px; color: #999; margin-bottom: 5px;">${lastMessageTime}</div>
+            <button class="chat-menu-btn" onclick="event.stopPropagation(); openChatMenu('${chat._id}', event)" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+        </div>
+    `;
+    
+    return div;
+}
     
     // Получаем текст последнего сообщения
     let lastMessageText = '';
@@ -2344,7 +2413,6 @@ function searchChats() {
             document.getElementById('profileLastName').value = currentUser.lastName || '';
             document.getElementById('profileBio').value = currentUser.bio || '';
             
-            // ====== ДОБАВЬТЕ ЭТИ СТРОКИ ======
             // Скрываем форму смены пароля при открытии
             document.getElementById('passwordChangeForm').style.display = 'none';
             
@@ -2352,7 +2420,27 @@ function searchChats() {
             document.getElementById('profileCurrentPassword').value = '';
             document.getElementById('profileNewPassword').value = '';
             document.getElementById('profileConfirmPassword').value = '';
-            // ====== КОНЕЦ ДОБАВЛЕННЫХ СТРОК ======
+            
+            // ====== ДОБАВЬТЕ ЭТОТ КОД ======
+            // Обновляем предпросмотр аватара
+            const preview = document.getElementById('avatarPreview');
+            const previewEmoji = document.getElementById('avatarPreviewEmoji');
+            
+            if (currentUser.avatar && currentUser.avatar.startsWith('http')) {
+                // Если аватар - URL изображения
+                preview.style.backgroundImage = `url('${currentUser.avatar}')`;
+                preview.style.backgroundSize = 'cover';
+                preview.style.backgroundPosition = 'center';
+                preview.style.backgroundColor = 'transparent';
+                previewEmoji.style.display = 'none';
+            } else {
+                // Если аватар - эмодзи
+                preview.style.backgroundImage = '';
+                preview.style.backgroundColor = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                previewEmoji.style.display = 'block';
+                previewEmoji.textContent = currentUser.avatar || '😊';
+            }
+            // ====== КОНЕЦ ДОБАВЛЕННОГО КОДА ======
             
             document.getElementById('profileModal').classList.add('active');
         }
@@ -3586,6 +3674,159 @@ async function uploadAudio(audioBlob, duration) {
             document.body.appendChild(viewer);
         }
     </script>
+
+        // ============================================
+        // Функции для загрузки аватара
+        // ============================================
+
+        // Выбрать файл для аватара
+        function selectAvatarFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    uploadAvatar(file);
+                }
+            };
+            input.click();
+        }
+
+        // Загрузить аватар на сервер
+        async function uploadAvatar(file) {
+            // Проверяем размер (максимум 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Файл слишком большой (максимум 2MB)');
+                return;
+            }
+            
+            // Проверяем тип файла
+            if (!file.type.startsWith('image/')) {
+                showToast('Можно загружать только изображения');
+                return;
+            }
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showToast('Требуется авторизация');
+                return;
+            }
+            
+            showToast('🔄 Загрузка аватара...');
+            
+            try {
+                // Сжимаем изображение перед отправкой
+                const compressedFile = await compressImageForAvatar(file);
+                
+                const formData = new FormData();
+                formData.append('avatar', compressedFile);
+                
+                const response = await fetch(`${API_URL}/api/upload-avatar`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Ошибка загрузки');
+                }
+                
+                if (data.success) {
+                    // Обновляем текущего пользователя
+                    currentUser.avatar = data.url;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // Обновляем аватар в интерфейсе
+                    updateAvatarDisplay(data.url);
+                    
+                    // Обновляем предпросмотр в модальном окне
+                    updateAvatarPreview(data.url);
+                    
+                    showToast('✅ Аватар успешно загружен');
+                }
+                
+            } catch (err) {
+                console.error('Ошибка загрузки аватара:', err);
+                showToast('Ошибка при загрузке аватара');
+            }
+        }
+
+        // Сжатие изображения для аватара
+        function compressImageForAvatar(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        // Делаем квадрат 300x300
+                        const size = 300;
+                        
+                        canvas.width = size;
+                        canvas.height = size;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Вычисляем отступы для центрирования
+                        const minSize = Math.min(width, height);
+                        const offsetX = (width - minSize) / 2;
+                        const offsetY = (height - minSize) / 2;
+                        
+                        // Рисуем изображение с обрезкой по центру
+                        ctx.drawImage(img, offsetX, offsetY, minSize, minSize, 0, 0, size, size);
+                        
+                        // Конвертируем в blob с качеством 0.9
+                        canvas.toBlob((blob) => {
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        }, 'image/jpeg', 0.9);
+                    };
+                };
+                reader.onerror = reject;
+            });
+        }
+
+        // Обновить отображение аватара в интерфейсе
+        function updateAvatarDisplay(url) {
+            const profileAvatar = document.getElementById('profileAvatar');
+            if (profileAvatar) {
+                profileAvatar.innerHTML = ''; // Очищаем
+                profileAvatar.style.backgroundImage = `url('${url}')`;
+                profileAvatar.style.backgroundSize = 'cover';
+                profileAvatar.style.backgroundPosition = 'center';
+                profileAvatar.style.backgroundColor = 'transparent';
+                profileAvatar.style.fontSize = '0'; // Скрываем текст
+            }
+            
+            // Обновляем во всех чатах при следующей перерисовке
+            loadChats();
+        }
+
+        // Обновить предпросмотр в модальном окне
+        function updateAvatarPreview(url) {
+            const preview = document.getElementById('avatarPreview');
+            const previewEmoji = document.getElementById('avatarPreviewEmoji');
+            
+            if (preview && previewEmoji) {
+                preview.style.backgroundImage = `url('${url}')`;
+                preview.style.backgroundSize = 'cover';
+                preview.style.backgroundPosition = 'center';
+                preview.style.backgroundColor = 'transparent';
+                previewEmoji.style.display = 'none'; // Скрываем эмодзи
+            }
+        }
 
 </body>
 </html>

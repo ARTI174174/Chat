@@ -290,6 +290,64 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 });
 
+// ========== НОВЫЙ ЭНДПОИНТ ДЛЯ АВАТАРОК ==========
+// Эндпоинт для загрузки аватарок (с авторизацией)
+app.post('/api/upload-avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
+    console.log('🔥 /api/upload-avatar вызван!', req.file ? 'Файл есть' : 'Файла нет');
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Файл не загружен' });
+        }
+        
+        // Проверяем, что это изображение
+        if (!req.file.mimetype.startsWith('image/')) {
+            return res.status(400).json({ error: 'Можно загружать только изображения' });
+        }
+        
+        // Загружаем аватар в Cloudinary в папку avatars с трансформацией
+        const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'avatars',
+                    resource_type: 'image',
+                    transformation: [
+                        { width: 300, height: 300, crop: 'fill', gravity: 'face' }, // Квадрат 300x300
+                        { quality: 'auto' } // Автоматическое сжатие
+                    ],
+                    format: 'jpg'
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            
+            uploadStream.end(req.file.buffer);
+        });
+        
+        // Обновляем поле avatar у пользователя в базе
+        const user = await User.findByIdAndUpdate(
+            req.user.userId,
+            { avatar: result.secure_url },
+            { new: true }
+        );
+        
+        if (!user) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        res.json({ 
+            success: true, 
+            url: result.secure_url
+        });
+        
+    } catch (err) {
+        console.error('Ошибка загрузки аватара:', err);
+        res.status(500).json({ error: 'Ошибка загрузки аватара' });
+    }
+});
+// ========== КОНЕЦ НОВОГО ЭНДПОИНТА ==========
+
 
 // ------------------------------
 // Авторизация
