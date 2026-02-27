@@ -1139,29 +1139,43 @@
                     <textarea id="profileBio" placeholder="Расскажите о себе" rows="3"></textarea>
                 </div>
                 
-                <!-- ========== НОВЫЕ ПОЛЯ ДЛЯ ПАРОЛЯ ========== -->
-                <div style="margin: 20px 0; border-top: 1px solid #f0f0f0; padding-top: 20px;">
-                    <h3>Смена пароля</h3>
+                <!-- ========== НОВЫЙ БЛОК ДЛЯ СМЕНЫ ПАРОЛЯ ========== -->
+                <div style="margin: 20px 0; border-top: 2px solid #f0f0f0; padding-top: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #333;">🔒 Безопасность</h3>
                     
-                    <div class="form-group" style="position: relative;">
-                        <label>Текущий пароль</label>
-                        <input type="password" id="profileCurrentPassword" placeholder="Введите текущий пароль" style="padding-right: 40px;">
-                        <span onclick="togglePassword('profileCurrentPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
-                    </div>
+                    <!-- Кнопка для открытия формы смены пароля -->
+                    <button class="btn btn-secondary" onclick="togglePasswordChangeForm()" style="margin-bottom: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        🔑 Сменить пароль
+                    </button>
                     
-                    <div class="form-group" style="position: relative;">
-                        <label>Новый пароль</label>
-                        <input type="password" id="profileNewPassword" placeholder="Минимум 6 символов" style="padding-right: 40px;">
-                        <span onclick="togglePassword('profileNewPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
-                        <small style="color: #666; font-size: 12px;">Минимум 6 символов</small>
-                    </div>
-                    
-                    <div class="form-group" style="position: relative;">
-                        <label>Подтвердите новый пароль</label>
-                        <input type="password" id="profileConfirmPassword" placeholder="Повторите новый пароль" style="padding-right: 40px;">
-                        <span onclick="togglePassword('profileConfirmPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
+                    <!-- Форма смены пароля (скрыта по умолчанию) -->
+                    <div id="passwordChangeForm" style="display: none;">
+                        <div class="form-group" style="position: relative;">
+                            <label>Текущий пароль</label>
+                            <input type="password" id="profileCurrentPassword" placeholder="Введите текущий пароль" style="padding-right: 40px;">
+                            <span onclick="togglePassword('profileCurrentPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
+                        </div>
+                        
+                        <div class="form-group" style="position: relative;">
+                            <label>Новый пароль</label>
+                            <input type="password" id="profileNewPassword" placeholder="Минимум 6 символов" style="padding-right: 40px;">
+                            <span onclick="togglePassword('profileNewPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
+                            <small style="color: #666; font-size: 12px;">Минимум 6 символов</small>
+                        </div>
+                        
+                        <div class="form-group" style="position: relative;">
+                            <label>Подтвердите новый пароль</label>
+                            <input type="password" id="profileConfirmPassword" placeholder="Повторите новый пароль" style="padding-right: 40px;">
+                            <span onclick="togglePassword('profileConfirmPassword', this)" style="position: absolute; right: 10px; top: 38px; cursor: pointer; color: #666;">👁️</span>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" style="flex: 1;" onclick="changePassword()">Сохранить пароль</button>
+                            <button class="btn btn-secondary" style="flex: 1;" onclick="cancelPasswordChange()">Отмена</button>
+                        </div>
                     </div>
                 </div>
+                <!-- ========== КОНЕЦ БЛОКА СМЕНЫ ПАРОЛЯ ========== -->
                 <!-- ========== КОНЕЦ НОВЫХ ПОЛЕЙ ========== -->
                 
                 <div class="form-group">
@@ -1173,6 +1187,8 @@
             </div>
         </div>
         
+		
+		
         <div class="modal" id="addFriendModal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -2327,22 +2343,27 @@ function searchChats() {
             document.getElementById('profileFirstName').value = currentUser.firstName || '';
             document.getElementById('profileLastName').value = currentUser.lastName || '';
             document.getElementById('profileBio').value = currentUser.bio || '';
+            
+            // ====== ДОБАВЬТЕ ЭТИ СТРОКИ ======
+            // Скрываем форму смены пароля при открытии
+            document.getElementById('passwordChangeForm').style.display = 'none';
+            
+            // Очищаем поля пароля
+            document.getElementById('profileCurrentPassword').value = '';
+            document.getElementById('profileNewPassword').value = '';
+            document.getElementById('profileConfirmPassword').value = '';
+            // ====== КОНЕЦ ДОБАВЛЕННЫХ СТРОК ======
+            
             document.getElementById('profileModal').classList.add('active');
         }
         
-        async function updateProfile() {
+         async function updateProfile() {
             const firstName = document.getElementById('profileFirstName').value.trim();
             const lastName = document.getElementById('profileLastName').value.trim();
             const bio = document.getElementById('profileBio').value.trim();
             const avatar = window.selectedProfileAvatar || currentUser.avatar;
             
-            // Получаем данные пароля
-            const currentPassword = document.getElementById('profileCurrentPassword').value.trim();
-            const newPassword = document.getElementById('profileNewPassword').value.trim();
-            const confirmPassword = document.getElementById('profileConfirmPassword').value.trim();
-            
             try {
-                // Сначала обновляем профиль
                 const profileResponse = await fetchWithAuth(`${API_URL}/user/update`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2369,52 +2390,10 @@ function searchChats() {
                     
                     document.getElementById('profileAvatar').textContent = avatar;
                     document.getElementById('profileName').textContent = `${firstName} ${lastName}`.trim() || currentUser.username;
+                    
+                    closeModal('profileModal');
+                    showToast('✅ Профиль обновлен');
                 }
-                
-                // Если есть данные для смены пароля
-                if (currentPassword && newPassword && confirmPassword) {
-                    // Проверяем, что пароли совпадают
-                    if (newPassword !== confirmPassword) {
-                        showToast('Новые пароли не совпадают');
-                        return;
-                    }
-                    
-                    // Проверяем длину нового пароля
-                    if (newPassword.length < 6) {
-                        showToast('Новый пароль должен быть не менее 6 символов');
-                        return;
-                    }
-                    
-                    // Отправляем запрос на смену пароля
-                    const passwordResponse = await fetchWithAuth(`${API_URL}/user/change-password`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userId: currentUser._id,
-                            currentPassword,
-                            newPassword
-                        })
-                    });
-                    
-                    if (!passwordResponse) return;
-                    
-                    const passwordData = await passwordResponse.json();
-                    
-                    if (passwordData.success) {
-                        showToast('Пароль успешно изменен');
-                        // Очищаем поля пароля
-                        document.getElementById('profileCurrentPassword').value = '';
-                        document.getElementById('profileNewPassword').value = '';
-                        document.getElementById('profileConfirmPassword').value = '';
-						return; // ← ДОБАВЬТЕ ЭТУ СТРОКУ
-                    } else {
-                        showToast(passwordData.error || 'Ошибка при смене пароля');
-                        return;
-                    }
-                }
-                
-                closeModal('profileModal');
-                showToast('Профиль обновлен');
                 
             } catch (err) {
                 console.error('Ошибка обновления:', err);
@@ -2422,6 +2401,80 @@ function searchChats() {
             }
         }
         
+		        // ============================================
+        // Функции для смены пароля
+        // ============================================
+
+        // Показать/скрыть форму смены пароля
+        function togglePasswordChangeForm() {
+            const form = document.getElementById('passwordChangeForm');
+            if (form.style.display === 'none' || form.style.display === '') {
+                form.style.display = 'block';
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        // Отмена смены пароля (очистить поля и скрыть форму)
+        function cancelPasswordChange() {
+            document.getElementById('profileCurrentPassword').value = '';
+            document.getElementById('profileNewPassword').value = '';
+            document.getElementById('profileConfirmPassword').value = '';
+            document.getElementById('passwordChangeForm').style.display = 'none';
+        }
+
+        // Смена пароля
+        async function changePassword() {
+            const currentPassword = document.getElementById('profileCurrentPassword').value.trim();
+            const newPassword = document.getElementById('profileNewPassword').value.trim();
+            const confirmPassword = document.getElementById('profileConfirmPassword').value.trim();
+            
+            // Проверяем, что все поля заполнены
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showToast('Заполните все поля');
+                return;
+            }
+            
+            // Проверяем, что новый пароль совпадает с подтверждением
+            if (newPassword !== confirmPassword) {
+                showToast('Новые пароли не совпадают');
+                return;
+            }
+            
+            // Проверяем длину нового пароля
+            if (newPassword.length < 6) {
+                showToast('Новый пароль должен быть не менее 6 символов');
+                return;
+            }
+            
+            try {
+                const response = await fetchWithAuth(`${API_URL}/user/change-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUser._id,
+                        currentPassword,
+                        newPassword
+                    })
+                });
+                
+                if (!response) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('✅ Пароль успешно изменен');
+                    cancelPasswordChange(); // Очищаем поля и скрываем форму
+                } else {
+                    showToast(data.error || 'Ошибка при смене пароля');
+                }
+                
+            } catch (err) {
+                console.error('Ошибка смены пароля:', err);
+                showToast('Ошибка сервера');
+            }
+        }
+		
         function openAddFriendModal() {
             updateAllUsersList();
             document.getElementById('addFriendModal').classList.add('active');
