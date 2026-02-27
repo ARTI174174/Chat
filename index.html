@@ -1752,7 +1752,7 @@ function createChatItem(chat) {
         if (otherParticipant) {
             chatName = `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username;
             
-            // Проверяем, ссылка или эмодзи
+            // ====== ВАЖНО: проверяем, ссылка это или эмодзи ======
             if (otherParticipant.avatar && otherParticipant.avatar.startsWith('http')) {
                 chatAvatar = ''; // Пусто, будем использовать фон
                 avatarStyle = `style="background-image: url('${otherParticipant.avatar}'); background-size: cover; background-position: center;"`;
@@ -1782,6 +1782,7 @@ function createChatItem(chat) {
     const unreadBadge = unreadCount > 0 ? 
         `<span style="background: #667eea; color: white; border-radius: 50%; min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; padding: 0 4px; margin-left: 5px;">${unreadCount}</span>` : '';
     
+    // ====== ВАЖНО: добавляем avatarStyle в тег ======
     div.innerHTML = `
         <div class="chat-avatar" style="width: 45px; height: 45px; font-size: 22px; position: relative; overflow: hidden;" ${avatarStyle}>
             ${chatAvatar}
@@ -1854,42 +1855,53 @@ function createChatItem(chat) {
             }
         }
         
-        function updateChatHeader() {
-            const chatInfo = document.getElementById('currentChatInfo');
+function updateChatHeader() {
+    const chatInfo = document.getElementById('currentChatInfo');
+    
+    if (!currentChat) return;
+    
+    let chatName = currentChat.name;
+    let chatAvatar = '💬';
+    let avatarStyle = '';
+    let chatStatus = '';
+    
+    if (currentChat.type === 'private') {
+        const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
+        if (otherParticipant) {
+            chatName = `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username;
             
-            if (!currentChat) return;
-            
-            let chatName = currentChat.name;
-            let chatAvatar = '💬';
-            let chatStatus = '';
-            
-            if (currentChat.type === 'private') {
-                const otherParticipant = currentChat.participants.find(p => p._id !== currentUser._id);
-                if (otherParticipant) {
-                    chatName = `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.username;
-                    chatAvatar = otherParticipant.avatar || '😊';
-                    chatStatus = otherParticipant.isOnline ? 'онлайн' : `был(а) ${formatLastSeen(otherParticipant.lastSeen)}`;
-                }
+            // ====== ВАЖНО: проверяем аватар ======
+            if (otherParticipant.avatar && otherParticipant.avatar.startsWith('http')) {
+                avatarStyle = `style="background-image: url('${otherParticipant.avatar}'); background-size: cover; background-position: center;"`;
+                chatAvatar = ''; // Пусто, будем использовать фон
             } else {
-                chatStatus = `${currentChat.participants.length} участников`;
+                chatAvatar = otherParticipant.avatar || '😊';
             }
             
-            chatInfo.innerHTML = `
-                <div class="chat-header-avatar">${chatAvatar}</div>
-                <div class="chat-header-details">
-                    <h3>${chatName}</h3>
-                    <p>${chatStatus}</p>
-                </div>
-            `;
-            
-            // Оставляем поиск, убираем закрепить и удалить
-            const chatActions = document.querySelector('.chat-actions');
-            if (chatActions) {
-                chatActions.innerHTML = `
-                    <button class="chat-action-btn" onclick="openChatSearch()" style="background: #667eea; color: white;">🔍 Поиск</button>
-                `;
-            }
+            chatStatus = otherParticipant.isOnline ? 'онлайн' : `был(а) ${formatLastSeen(otherParticipant.lastSeen)}`;
         }
+    } else {
+        chatStatus = `${currentChat.participants.length} участников`;
+    }
+    
+    chatInfo.innerHTML = `
+        <div class="chat-header-avatar" style="display: flex; justify-content: center; align-items: center; overflow: hidden;" ${avatarStyle}>
+            ${chatAvatar}
+        </div>
+        <div class="chat-header-details">
+            <h3>${chatName}</h3>
+            <p>${chatStatus}</p>
+        </div>
+    `;
+    
+    // Оставляем поиск, убираем закрепить и удалить
+    const chatActions = document.querySelector('.chat-actions');
+    if (chatActions) {
+        chatActions.innerHTML = `
+            <button class="chat-action-btn" onclick="openChatSearch()" style="background: #667eea; color: white;">🔍 Поиск</button>
+        `;
+    }
+}
         
 // ========== ФУНКЦИИ ПОИСКА В ЧАТЕ ==========
 
@@ -2175,74 +2187,86 @@ function debounce(func, wait) {
         
 		
         // Функция для создания одного элемента сообщения
-        async function createMessageElement(msg) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
-            
-            let messageContent = '';
-            let messageText = '';
-            
-            // Определяем тип сообщения и формируем содержимое
-            if (msg.type === 'image' && msg.fileUrl) {
-                messageContent = `<img src="${msg.fileUrl}" class="chat-image" onclick="openImageViewer('${msg.fileUrl}')">`;
-            } else if (msg.type === 'audio' && msg.fileUrl) {
-                messageContent = `<audio controls class="chat-audio" src="${msg.fileUrl}"></audio>`;
-            } else {
-                // Текстовое сообщение (может быть зашифровано)
-                messageText = msg.text;
-                
-                // Для личных чатов пытаемся расшифровать
-                if (currentChat && currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
-                    try {
-                        if (privateKeys[currentUser._id] && msg.encryptedText) {
-                            messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
-                        }
-                    } catch (e) {
-                        console.error('Ошибка расшифровки:', e);
-                        messageText = '🔒 Зашифрованное сообщение';
-                    }
+async function createMessageElement(msg) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${msg.senderId._id === currentUser._id ? 'own' : ''}`;
+    
+    let messageContent = '';
+    let messageText = '';
+    let avatarHtml = '';
+    
+    // ====== ВАЖНО: проверяем аватар отправителя ======
+    if (msg.senderId.avatar && msg.senderId.avatar.startsWith('http')) {
+        avatarHtml = `<div style="width: 100%; height: 100%; background-image: url('${msg.senderId.avatar}'); background-size: cover; background-position: center; border-radius: 50%;"></div>`;
+    } else {
+        avatarHtml = msg.senderId.avatar || '😊';
+    }
+    
+    // Определяем тип сообщения и формируем содержимое
+    if (msg.type === 'image' && msg.fileUrl) {
+        messageContent = `<img src="${msg.fileUrl}" class="chat-image" onclick="openImageViewer('${msg.fileUrl}')">`;
+    } else if (msg.type === 'audio' && msg.fileUrl) {
+        messageContent = `<audio controls class="chat-audio" src="${msg.fileUrl}"></audio>`;
+    } else {
+        // Текстовое сообщение (может быть зашифровано)
+        messageText = msg.text;
+        
+        // Для личных чатов пытаемся расшифровать
+        if (currentChat && currentChat.type === 'private' && msg.senderId._id !== currentUser._id) {
+            try {
+                if (privateKeys[currentUser._id] && msg.encryptedText) {
+                    messageText = await decryptMessage(msg.encryptedText, privateKeys[currentUser._id]);
                 }
-                
-                // Для групповых чатов показываем обычный текст
-                if (currentChat && currentChat.type === 'group') {
-                    messageText = msg.text;
-                }
+            } catch (e) {
+                console.error('Ошибка расшифровки:', e);
+                messageText = '🔒 Зашифрованное сообщение';
             }
-            
-            const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
-            const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
-            
-            messageDiv.setAttribute('data-message-id', msg._id);
-            
-            // Формируем HTML
-            if (msg.type === 'image' || msg.type === 'audio') {
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
-                    <div class="message-content" style="position: relative;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div class="message-sender">${senderName}</div>
-                            <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
-                        </div>
-                        ${messageContent}
-                        <div class="message-time">${time}</div>
-                    </div>
-                `;
-            } else {
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">${msg.senderId.avatar || '😊'}</div>
-                    <div class="message-content" style="position: relative;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div class="message-sender">${senderName}</div>
-                            <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
-                        </div>
-                        <div class="message-text">${messageText}</div>
-                        <div class="message-time">${time}</div>
-                    </div>
-                `;
-            }
-            
-            return messageDiv;
         }
+        
+        // Для групповых чатов показываем обычный текст
+        if (currentChat && currentChat.type === 'group') {
+            messageText = msg.text;
+        }
+    }
+    
+    const senderName = msg.senderId._id === currentUser._id ? 'Вы' : (msg.senderName || msg.senderId.username);
+    const time = new Date(msg.createdAt).toLocaleTimeString().slice(0,5);
+    
+    messageDiv.setAttribute('data-message-id', msg._id);
+    
+    // Формируем HTML
+    if (msg.type === 'image' || msg.type === 'audio') {
+        messageDiv.innerHTML = `
+            <div class="message-avatar" style="display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                ${avatarHtml}
+            </div>
+            <div class="message-content" style="position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="message-sender">${senderName}</div>
+                    <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                </div>
+                ${messageContent}
+                <div class="message-time">${time}</div>
+            </div>
+        `;
+    } else {
+        messageDiv.innerHTML = `
+            <div class="message-avatar" style="display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                ${avatarHtml}
+            </div>
+            <div class="message-content" style="position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="message-sender">${senderName}</div>
+                    <button class="message-menu-btn" onclick="event.stopPropagation(); openMessageMenu('${msg._id}', event)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #888; padding: 0 5px;">⋮</button>
+                </div>
+                <div class="message-text">${messageText}</div>
+                <div class="message-time">${time}</div>
+            </div>
+        `;
+    }
+    
+    return messageDiv;
+}
 		
         async function displayMessages(messages) {
             const container = document.getElementById('messagesContainer');
@@ -2633,39 +2657,46 @@ function searchChats() {
             }
         }
         
-        function updateMyFriendsList() {
-            const list = document.getElementById('myFriendsList');
-            if (!list) return;
-            list.innerHTML = '';
-            
-            if (friends.length === 0) {
-                list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">У вас пока нет друзей</p>';
-                return;
-            }
-            
-            friends.forEach(friend => {
-                const div = document.createElement('div');
-                div.className = 'user-item';
-                div.style.padding = '10px';
-                div.style.marginBottom = '5px';
-                div.style.cursor = 'pointer';
-                
-                div.innerHTML = `
-                    <div class="user-avatar" style="width: 40px; height: 40px; font-size: 20px; position: relative;">
-                        ${friend.avatar || '😊'}
-                        <span class="online-indicator" style="background: ${friend.isOnline ? '#4CAF50' : '#9e9e9e'}; width: 8px; height: 8px; bottom: 0; right: 0;"></span>
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name">${friend.firstName || ''} ${friend.lastName || ''} (${friend.username})</div>
-                        <div class="user-status" style="font-size: 11px;">${friend.isOnline ? 'онлайн' : 'офлайн'}</div>
-                    </div>
-                    <button class="chat-action-btn" onclick="toggleChatSearch()" style="background: #667eea; color: white;">🔍 Поиск</button>
-                `;
-                
-                div.onclick = () => startPrivateChat(friend._id);
-                list.appendChild(div);
-            });
+function updateAllUsersList() {
+    const list = document.getElementById('allUsersList');
+    if (!list) return;
+    list.innerHTML = '';
+    
+    const filteredUsers = allUsers.filter(user => 
+        user._id !== currentUser._id && 
+        !friends.some(f => f._id === user._id)
+    );
+    
+    filteredUsers.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.onclick = () => sendFriendRequestToUser(user.username);
+        
+        let avatarHtml = '';
+        let avatarStyle = '';
+        
+        // ====== ВАЖНО: проверяем аватар пользователя ======
+        if (user.avatar && user.avatar.startsWith('http')) {
+            avatarStyle = `style="background-image: url('${user.avatar}'); background-size: cover; background-position: center;"`;
+            avatarHtml = ''; // Пусто, будем использовать фон
+        } else {
+            avatarHtml = user.avatar || '😊';
         }
+        
+        div.innerHTML = `
+            <div class="user-avatar" style="position: relative; overflow: hidden;" ${avatarStyle}>
+                ${avatarHtml}
+                <span class="online-indicator" style="background: ${user.isOnline ? '#4CAF50' : '#9e9e9e'}"></span>
+            </div>
+            <div class="user-info">
+                <div class="user-name">${user.firstName || ''} ${user.lastName || ''} (${user.username})</div>
+                <div class="user-status">${user.bio || 'Нет информации'}</div>
+            </div>
+        `;
+        
+        list.appendChild(div);
+    });
+}
         
         async function startPrivateChat(friendId) {
             closeModal('friendsModal');
